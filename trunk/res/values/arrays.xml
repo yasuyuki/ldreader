@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string-array name="dialog_subs_view_items">
+        <item>Flat</item>
+        <item>Folder</item>
+        <item>Rating</item>
+        <item>Subscribers</item>
+    </string-array>
+
+    <string-array name="dialog_subs_sort_items">
+        <item>Recent</item>
+        <item>Old</item>
+        <item>Unread desc</item>
+        <item>Unread asc</item>
+        <item>Title</item>
+        <item>Rating</item>
+        <item>Subscribers desc</item>
+        <item>Subscribers asc</item>
+    </string-array>
+
+    <string-array name="sync_interval_hours_labels">
+        <item>Manual</item>
+        <item>Every 1 hour</item>
+        <item>Every 2 hours</item>
+        <item>Every 3 hours</item>
+        <item>Every 6 hours</item>
+        <item>Every 12 hours</item>
+        <item>Everydays</item>
+    </string-array>
+    <string-array name="sync_interval_hours_values">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>6</item>
+        <item>12</item>
+        <item>24</item>
+    </string-array>
+
+</resources>

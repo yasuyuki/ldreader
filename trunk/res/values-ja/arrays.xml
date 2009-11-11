@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string-array name="dialog_subs_view_items">
+        <item>フラット</item>
+        <item>フォルダ</item>
+        <item>レート</item>
+        <item>購読者数</item>
+    </string-array>
+
+    <string-array name="dialog_subs_sort_items">
+        <item>新着順</item>
+        <item>旧着順</item>
+        <item>未読が多い</item>
+        <item>未読が少ない</item>
+        <item>タイトル</item>
+        <item>レート</item>
+        <item>読者が多い</item>
+        <item>読者が少ない</item>
+    </string-array>
+
+    <string-array name="sync_interval_hours_labels">
+        <item>定期的に取り込まない</item>
+        <item>1時間毎</item>
+        <item>2時間毎</item>
+        <item>3時間毎</item>
+        <item>6時間毎</item>
+        <item>12時間毎</item>
+        <item>1日毎</item>
+    </string-array>
+    <string-array name="sync_interval_hours_values">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>6</item>
+        <item>12</item>
+        <item>24</item>
+    </string-array>
+
+</resources>

@@ -1,0 +1,54 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">LDReader</string>
+
+    <string name="msg_login_running">Login..</string>
+    <string name="msg_login_success_and_sync_running">Login success. synchronization running.</string>
+    <string name="msg_login_fail">Login failure</string>
+    <string name="msg_login_info_html"><![CDATA[
+        LDReader using <a href="http://reader.livedoor.com/">livedoor Reader</a>.
+        <div style="text-align:center;margin-top:5px;">Created by: <a href="http://trycatch.jp/">Trycatch, Inc.</a></div>
+    ]]></string>
+    <string name="msg_sync_started">Synchronization started.</string>
+    <string name="msg_sync_running">Synchronization running.</string>
+    <string name="msg_sync_running_read">Item not found. Synchronization running.</string>
+    <string name="msg_sync_finished">{0} items synchronized. (unreads {1})</string>
+    <string name="msg_no_item_for_title">(Item not found)</string>
+    <string name="msg_no_item">Item not found.</string>
+    <string name="msg_touch_all_local">Marked all read in this feed</string>
+
+    <string name="err_io">Network error</string>
+
+    <string name="txt_login_id">livedoor ID</string>
+    <string name="txt_password">Password</string>
+    <string name="txt_login">Login</string>
+    <string name="txt_cancel">Cancel</string>
+    <string name="txt_get_account">GET livedoor ID</string>
+    <string name="txt_unreads">Unreads</string>
+    <string name="txt_reads">Reads</string>
+
+    <string name="login_title">Login</string>
+
+    <string name="dialog_subs_view_title">Select View Type</string>
+    <string name="dialog_subs_sort_title">Select Sort Type</string>
+
+    <string name="preference_category_account">Account</string>
+    <string name="preference_login_title">Login settings</string>
+
+    <string name="preference_category_sync">Synchronization</string>
+    <string name="preference_sync_interval_title">Interval</string>
+    <string name="preference_sync_interval_summary">How oftern should synchronize?</string>
+    <string name="preference_auto_touch_all_title">Auto send reads</string>
+    <string name="preference_auto_touch_all_summary">Send reads to server with synchronization.</string>
+    <string name="preference_sync_unread_only_title">Unreads only</string>
+    <string name="preference_sync_unread_only_summary">Synchronization unreads only</string>
+
+    <string name="preference_category_view">Display</string>
+    <string name="preference_view_unread_only_title">Hide no item</string>
+    <string name="preference_view_unread_only_summary">Hide no item feeds</string>
+
+    <string name="preference_category_info">Information</string>
+    <string name="preference_info_about_title">About LDReader</string>
+
+</resources>
