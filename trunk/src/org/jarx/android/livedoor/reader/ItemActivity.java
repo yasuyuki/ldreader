@@ -5,15 +5,18 @@ import java.util.HashSet;
 import java.util.Set;
 import android.app.Activity;
 import android.app.ProgressDialog;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -35,12 +38,34 @@ import android.widget.Toast;
 public class ItemActivity extends Activity {
 
     private Subscription sub;
+    private Item currentItem;
     private Uri subUri;
     private Item.FilterCursor itemsCursor;
     private int itemsCount;
     private int itemsIndex;
     private boolean unreadOnly = true;
     private Set<Long> readItemIds = new HashSet<Long>();
+    private ImageView pinView;
+    private boolean pinOn;
+    private ReaderService readerService;
+    private ReaderManager readerManager;
+
+    private ServiceConnection serviceConn = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName className, IBinder service) {
+            ReaderService.ReaderBinder binder = (ReaderService.ReaderBinder) service;
+            ItemActivity.this.readerService = binder.getService();
+            ItemActivity.this.readerManager = binder.getManager();
+            if (ItemActivity.this.itemsCount == 0) {
+                ItemActivity.this.progressSyncItems();
+            }
+        }
+        @Override
+        public void onServiceDisconnected(ComponentName className) {
+            ItemActivity.this.readerService = null;
+            ItemActivity.this.readerManager = null;
+        }
+    };
 
     private final Handler handler = new Handler();
     private final Runnable hideTouchControlViewsRunner = new Runnable() {
@@ -57,12 +82,15 @@ public class ItemActivity extends Activity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        SubscriptionActivity.bindTitle(this);
+        bindService(new Intent(this, ReaderService.class), this.serviceConn,
+            Context.BIND_AUTO_CREATE);
 
         Window w = getWindow();
         w.requestFeature(Window.FEATURE_LEFT_ICON);
         setContentView(R.layout.item);
         w.setFeatureDrawableResource(Window.FEATURE_LEFT_ICON, R.drawable.icon_s);
+
+        SubscriptionActivity.bindTitle(this);
 
         Intent intent = getIntent();
         long subId = intent.getLongExtra(SubscriptionActivity.EXTRA_SUBSCRIPTION_ID, 0);
@@ -120,6 +148,14 @@ public class ItemActivity extends Activity {
                 bodyView.zoomOut();
             }
         });
+        this.pinView = (ImageView) findViewById(R.id.pin);
+        this.pinView.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                progressPin();
+            }
+        });
+
+        initItems();
     }
 
     @Override
@@ -138,8 +174,14 @@ public class ItemActivity extends Activity {
         case R.id.menu_item_touch_all_local:
             ContentResolver cr = getContentResolver();
             destroyItems(true);
-            initItems(false);
+            initItems();
             showToast(getText(R.string.msg_touch_all_local));
+            return true;
+        case R.id.menu_item_pin:
+            progressPin();
+            return true;
+        case R.id.menu_item_pin_list:
+            startActivity(new Intent(this, PinActivity.class));
             return true;
         case R.id.menu_item_setting:
             startActivity(new Intent(this, ReaderPreferenceActivity.class));
@@ -151,7 +193,6 @@ public class ItemActivity extends Activity {
     @Override
     public void onResume() {
         super.onResume();
-        initItems(true);
     }
 
     @Override
@@ -165,11 +206,11 @@ public class ItemActivity extends Activity {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        unbindService(this.serviceConn);
         destroyItems(false);
     }
 
     private void progressSyncItems() {
-        final Context context = getApplicationContext();
         final long subId = this.sub.getId();
         final ProgressDialog dialog = new ProgressDialog(this);
         dialog.setIndeterminate(true);
@@ -177,7 +218,7 @@ public class ItemActivity extends Activity {
         dialog.show();
         new Thread() {
             public void run() {
-                ReaderManager rm = ReaderManager.newInstance(getApplicationContext());
+                ReaderManager rm = ItemActivity.this.readerManager;
                 try {
                     rm.syncItems(subId, false);
                 } catch (IOException e) {
@@ -187,7 +228,7 @@ public class ItemActivity extends Activity {
                 }
                 handler.post(new Runnable() {
                     public void run() {
-                        ItemActivity.this.initItems(false);
+                        ItemActivity.this.initItems();
                         dialog.dismiss();
                     }
                 });
@@ -195,7 +236,47 @@ public class ItemActivity extends Activity {
         }.start();
     }
 
-    private void initItems(boolean syncIfNoItem) {
+    private void progressPin() {
+        final Item item = this.currentItem;
+        if (item == null) {
+            return;
+        }
+        final boolean add = !this.pinOn;
+        final ProgressDialog dialog = new ProgressDialog(this);
+        dialog.setIndeterminate(true);
+        if (add) {
+            dialog.setMessage(getText(R.string.msg_pin_add_running));
+        } else {
+            dialog.setMessage(getText(R.string.msg_pin_remove_running));
+        }
+        dialog.show();
+        new Thread() {
+            public void run() {
+                ReaderManager rm = ItemActivity.this.readerManager;
+                try {
+                    if (add) {
+                        rm.pinAdd(item.getUri(), item.getTitle());
+                    } else {
+                        rm.pinRemove(item.getUri());
+                    }
+                } catch (IOException e) {
+                    // NOTE: ignore
+                    // showToast(e);
+                } catch (ReaderException e) {
+                    // NOTE: ignore
+                    // showToast(e);
+                }
+                handler.post(new Runnable() {
+                    public void run() {
+                        ItemActivity.this.bindPinView();
+                        dialog.dismiss();
+                    }
+                });
+            }
+        }.start();
+    }
+
+    private void initItems() {
         if (this.itemsCursor != null && !this.itemsCursor.isClosed()) {
             this.itemsCursor.close();
         }
@@ -218,14 +299,6 @@ public class ItemActivity extends Activity {
                 managedQuery(Item.CONTENT_URI, null, whereBase, null, orderby));
             this.itemsCount = this.itemsCursor.getCount();
             this.unreadOnly = false;
-            if (this.itemsCount == 0) {
-                if (syncIfNoItem) {
-                    progressSyncItems();
-                    return;
-                } else {
-                    showToast(getText(R.string.msg_no_item));
-                }
-            }
         }
 
         bindSubTitleView();
@@ -239,8 +312,9 @@ public class ItemActivity extends Activity {
         this.itemsCursor = null;
         this.itemsCount = 0;
         this.itemsIndex = 0;
+
+        ContentResolver cr = getContentResolver();
         if (touchAllLocal || this.readItemIds.size() > 0) {
-            ContentResolver cr = getContentResolver();
             int buffSize = 128 + (this.readItemIds.size() * 3);
             StringBuilder where = new StringBuilder(buffSize);
             where.append(Item._UNREAD + " = 1");
@@ -278,6 +352,10 @@ public class ItemActivity extends Activity {
             }
             this.readItemIds.clear();
         }
+
+        ContentValues values = new ContentValues();
+        values.put(Subscription._READ_ITEM_ID, this.sub.getReadItemId());
+        cr.update(this.subUri, values, null, null);
     }
 
     private void nextItem() {
@@ -388,18 +466,43 @@ public class ItemActivity extends Activity {
         if (this.itemsCount > 0
                 && this.itemsCursor.moveToPosition(this.itemsIndex)) {
             Item item = this.itemsCursor.getItem();
-
             titleView.setText(item.getTitle());
             bodyView.loadDataWithBaseURL(ApiClient.URL_READER,
                 createBodyHtml(item), "text/html", "UTF-8", "about:blank");
             if (bindTouchControlViews) {
                 bindTouchControlViews(false);
             }
-
+            this.currentItem = item;
+            this.sub.setReadItemId(item.getId());
             this.readItemIds.add(item.getId());
         } else {
             titleView.setText(getText(R.string.msg_no_item_for_title));
             bodyView.clearView();
+        }
+        bindPinView();
+    }
+
+    private boolean pinExists() {
+        if (this.currentItem == null) {
+            return false;
+        }
+        Cursor cursor = managedQuery(Pin.CONTENT_URI, null,
+            Pin._URI + " = ? and " + Pin._ACTION + " <> " + Pin.ACTION_REMOVE,
+            new String[]{this.currentItem.getUri()}, null);
+        try {
+            return (cursor.getCount() > 0);
+        } finally {
+            cursor.close();
+        }
+    }
+
+    private void bindPinView() {
+        if (pinExists()) {
+            this.pinView.setImageResource(R.drawable.pin_on);
+            this.pinOn = true;
+        } else {
+            this.pinView.setImageResource(R.drawable.pin_off);
+            this.pinOn = false;
         }
     }
 
@@ -420,7 +523,7 @@ public class ItemActivity extends Activity {
                 buff.append("</small>");
             }
             if (author != null && author.length() > 0) {
-                buff.append("<small class=\"author\">by ");
+                buff.append(" <small class=\"author\">by ");
                 buff.append(Utils.htmlEscape(item.getAuthor()));
                 buff.append("</small>");
             }

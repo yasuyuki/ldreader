@@ -23,11 +23,17 @@ public class ReaderService extends Service {
     private static final String TAG = "ReaderService";
 
     class ReaderBinder extends Binder {
+
         ReaderService getService() {
             return ReaderService.this;
         }
+
+        ReaderManager getManager() {
+            return ReaderService.this.getSharedReaderManager();
+        }
     }
 
+    private ReaderManager rman;
     private NotificationManager nman;
     private Timer timer;
     private boolean syncRunning;
@@ -61,6 +67,7 @@ public class ReaderService extends Service {
 
     @Override
     public IBinder onBind(Intent intent) {
+        this.rman = new ReaderManager(getApplicationContext());
         return new ReaderBinder();
     }
 
@@ -70,7 +77,24 @@ public class ReaderService extends Service {
 
     @Override
     public boolean onUnbind(Intent intent) {
+        ReaderManager rm = this.rman;
+        if (rm != null) {
+            try {
+                rm.logout();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        this.rman = null;
         return true;
+    }
+
+    public ReaderManager getSharedReaderManager() {
+        ReaderManager rm = this.rman;
+        if (rm != null) {
+            return rm;
+        }
+        return new ReaderManager(getApplicationContext());
     }
 
     public boolean startSync() {

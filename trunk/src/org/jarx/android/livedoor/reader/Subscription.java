@@ -30,9 +30,12 @@ public final class Subscription implements Serializable, BaseColumns {
     public static final String _FOLDER = "folder";
     public static final String _MODIFIED_TIME = "modified_time";
     public static final String _ITEM_SYNC_TIME = "item_sync_time";
+    // NOTE database version 5 or later
+    public static final String _DISABLED = "disabled";
+    public static final String _READ_ITEM_ID = "read_item_id";
 
     public static final String SQL_CREATE_TABLE
-        = "create table " + TABLE_NAME + " ("
+        = "create table if not exists " + TABLE_NAME + " ("
         + _ID + " integer primary key, "
         + _URI + " text,"
         + _TITLE + " text,"
@@ -43,8 +46,10 @@ public final class Subscription implements Serializable, BaseColumns {
         + _UNREAD_COUNT + " integer,"
         + _FOLDER + " text,"
         + _MODIFIED_TIME + " integer,"
-        + _ITEM_SYNC_TIME + " integer default 0"
-        + ");";
+        + _ITEM_SYNC_TIME + " integer default 0,"
+        + _DISABLED + " integer,"
+        + _READ_ITEM_ID + " integer"
+        + ")";
 
     public static final String[] INDEX_COLUMNS = {
         _RATE,
@@ -52,7 +57,8 @@ public final class Subscription implements Serializable, BaseColumns {
         _UNREAD_COUNT,
         _FOLDER,
         _MODIFIED_TIME,
-        _ITEM_SYNC_TIME
+        _ITEM_SYNC_TIME,
+        _DISABLED
     };
 
     public static final String[] SORT_ORDERS = {
@@ -66,6 +72,17 @@ public final class Subscription implements Serializable, BaseColumns {
         _SUBSCRIBERS_COUNT + " asc"
     };
 
+    public static String[] sqlForUpgrade(int oldVersion, int newVersion) {
+        if (oldVersion < 5) {
+            return new String[] {
+                "alter table " + TABLE_NAME + " add " + _DISABLED + " integer",
+                "alter table " + TABLE_NAME + " add " + _READ_ITEM_ID + " integer",
+                ReaderProvider.sqlCreateIndex(TABLE_NAME, _DISABLED)
+            };
+        }
+        return new String[0];
+    }
+
     private long id;
     private String uri;
     private String title;
@@ -77,6 +94,8 @@ public final class Subscription implements Serializable, BaseColumns {
     private Bitmap icon;
     private long modifiedTime;
     private long itemSyncTime;
+    private boolean disabled;
+    private long readItemId;
 
     public Subscription() {
     }
@@ -169,6 +188,22 @@ public final class Subscription implements Serializable, BaseColumns {
         this.itemSyncTime = itemSyncTime;
     }
 
+    public boolean isDisabled() {
+        return this.disabled;
+    }
+
+    public void setDisabled(boolean disabled) {
+        this.disabled = disabled;
+    }
+
+    public long getReadItemId() {
+        return this.readItemId;
+    }
+
+    public void setReadItemId(long readItemId) {
+        this.readItemId = readItemId;
+    }
+
     public boolean equals(Object o) {
         if (o == this) {
             return true;
@@ -198,6 +233,8 @@ public final class Subscription implements Serializable, BaseColumns {
         private final int posFolder;
         private final int posModifiedTime;
         private final int posItemSyncTime;
+        private final int posDisabled;
+        private final int posReadItemId;
 
         public FilterCursor(Cursor cursor) {
             this(cursor, null);
@@ -216,6 +253,8 @@ public final class Subscription implements Serializable, BaseColumns {
             this.posFolder = cursor.getColumnIndex(Subscription._FOLDER);
             this.posModifiedTime = cursor.getColumnIndex(Subscription._MODIFIED_TIME);
             this.posItemSyncTime = cursor.getColumnIndex(Subscription._ITEM_SYNC_TIME);
+            this.posDisabled = cursor.getColumnIndex(Subscription._DISABLED);
+            this.posReadItemId = cursor.getColumnIndex(Subscription._READ_ITEM_ID);
         }
 
         public Subscription getSubscription() {
@@ -229,6 +268,8 @@ public final class Subscription implements Serializable, BaseColumns {
             sub.setFolder(this.cursor.getString(this.posFolder));
             sub.setModifiedTime(this.cursor.getLong(this.posModifiedTime));
             sub.setItemSyncTime(this.cursor.getLong(this.posItemSyncTime));
+            sub.setDisabled(this.cursor.getInt(this.posDisabled) == 1);
+            sub.setReadItemId(this.cursor.getInt(this.posReadItemId));
             byte[] data = cursor.getBlob(this.posIcon);
             if (data != null) {
                 Bitmap icon = BitmapFactory.decodeByteArray(data, 0, data.length);

@@ -19,6 +19,12 @@
         <item>読者が少ない</item>
     </string-array>
 
+    <string-array name="dialog_pin_action_items">
+        <item>ブラウザで閲覧</item>
+        <item>URL をコピー</item>
+        <item>削除</item>
+    </string-array>
+
     <string-array name="sync_interval_hours_labels">
         <item>定期的に取り込まない</item>
         <item>1時間毎</item>

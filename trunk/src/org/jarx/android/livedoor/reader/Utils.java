@@ -75,7 +75,7 @@ public class Utils {
     }
 
     public static String formatTimeAgo(long time) {
-        long diff = System.currentTimeMillis() - time;
+        long diff = (System.currentTimeMillis() / 1000) - time;
         if (diff < (7 * 24 * 60 * 60)) {
             if (diff < (60 * 60)) {
                 return (diff / 60) + " min ago";

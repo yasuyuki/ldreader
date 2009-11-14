@@ -25,7 +25,7 @@ public class Item implements Serializable, BaseColumns {
     public static final String _MODIFIED_TIME = "modified_time";
 
     public static final String SQL_CREATE_TABLE
-        = "create table " + TABLE_NAME + " ("
+        = "create table if not exists " + TABLE_NAME + " ("
         + _ID + " integer primary key,"
         + _SUBSCRIPTION_ID + " integer,"
         + _URI + " text,"
@@ -35,7 +35,7 @@ public class Item implements Serializable, BaseColumns {
         + _UNREAD + " integer,"
         + _CREATED_TIME + " integer,"
         + _MODIFIED_TIME + " integer"
-        + ");";
+        + ")";
 
     public static final String[] INDEX_COLUMNS = {
         _SUBSCRIPTION_ID,
@@ -44,6 +44,10 @@ public class Item implements Serializable, BaseColumns {
         _CREATED_TIME,
         _MODIFIED_TIME
     };
+
+    public static String[] sqlForUpgrade(int oldVersion, int newVersion) {
+        return new String[0];
+    }
 
     private long id;
     private long subscriptionId;
@@ -175,7 +179,7 @@ public class Item implements Serializable, BaseColumns {
             item.setBody(this.cursor.getString(this.posBody));
             item.setAuthor(this.cursor.getString(this.posAuthor));
             item.setUnread(this.cursor.getInt(this.posUnread) == 1);
-            item.setModifiedTime(this.cursor.getLong(this.posCreatedTime));
+            item.setCreatedTime(this.cursor.getLong(this.posCreatedTime));
             item.setModifiedTime(this.cursor.getLong(this.posModifiedTime));
             return item;
         }
