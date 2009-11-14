@@ -91,7 +91,7 @@ public class ReaderPreferences {
     }
 
     public static boolean isAutoTouchAll(Context c) {
-        return getBoolean(c, PREFS_KEY_AUTO_TOUCH_ALL, true);
+        return getBoolean(c, PREFS_KEY_AUTO_TOUCH_ALL, false);
     }
 
     public static boolean isViewUnreadOnly(Context c) {

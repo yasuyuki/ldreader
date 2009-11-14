@@ -40,10 +40,9 @@ public class SubscriptionActivity extends ListActivity {
     public static final String EXTRA_SUBSCRIPTION_ID = "subscriptionId";
 
     private static final String TAG = "SubscriptionActivity";
-    private static final int REQUEST_CODE_LOGIN = 1;
+    private static final int REQUEST_PREFERENCES = 1;
     private static final int DIALOG_SUBS_VIEW = 1;
     private static final int DIALOG_SUBS_SORT = 2;
-
     private final Handler handler = new Handler();
     private SubsAdapter subsAdapter;
     private ReaderService readerService;
@@ -83,26 +82,14 @@ public class SubscriptionActivity extends ListActivity {
 
         registerReceiver(this.refreshReceiver,
             new IntentFilter(ReaderService.ACTION_SYNC_SUBS_FINISHED));
+
+        bindTitle(this);
+        initListAdapter();
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        initListAdapter();
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode,int resultCode, 
-            Intent intent) {
-        if (requestCode == REQUEST_CODE_LOGIN
-                && resultCode == RESULT_CANCELED) {
-            String loginId = ReaderPreferences.getLoginId(
-                getApplicationContext());
-            if (loginId == null) {
-                Log.d(TAG, "onActivityResult() CANCELED: " + intent);
-                finish();
-            }
-        }
     }
 
     @Override
@@ -120,46 +107,6 @@ public class SubscriptionActivity extends ListActivity {
         unregisterReceiver(this.refreshReceiver);
         if (this.subsAdapter != null && !this.subsAdapter.cursor.isClosed()) {
             this.subsAdapter.cursor.close();
-        }
-    }
-
-    private void initListAdapter() {
-        if (this.subsAdapter != null && !this.subsAdapter.cursor.isClosed()) {
-            this.subsAdapter.cursor.close();
-        }
-        Context context = getApplicationContext();
-        String where = null;
-        if (ReaderPreferences.isViewUnreadOnly(context)) {
-            where = Subscription._UNREAD_COUNT + " > 0";
-        }
-        int subsSort = ReaderPreferences.getSubsSort(context);
-        if (subsSort < 1 || subsSort > Subscription.SORT_ORDERS.length) {
-            subsSort = 1;
-        }
-        String orderby = Subscription.SORT_ORDERS[subsSort - 1];
-        Cursor cursor = managedQuery(Subscription.CONTENT_URI,
-            null, where, null, orderby);
-        this.subsAdapter = new SubsAdapter(this, cursor);
-        setListAdapter(this.subsAdapter);
-    }
-
-    private void startSync() {
-        if (this.readerService.startSync()) {
-            showToast(getString(R.string.msg_sync_started));
-            initListAdapter();
-        } else {
-            showToast(getString(R.string.msg_sync_running));
-        }
-    }
-
-    static void bindTitle(Activity a) {
-        String loginId = ReaderPreferences.getLoginId(a.getApplicationContext());
-        if (loginId != null) {
-            StringBuilder buff = new StringBuilder(64);
-            buff.append(a.getText(R.string.app_name));
-            buff.append(" - ");
-            buff.append(loginId);
-            a.setTitle(new String(buff));
         }
     }
 
@@ -185,6 +132,97 @@ public class SubscriptionActivity extends ListActivity {
         return null;
     }
 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.subscription, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+        case R.id.menu_item_reload:
+            startSync();
+            initListAdapter();
+            return true;
+        case R.id.menu_item_subs_sort:
+            showDialog(DIALOG_SUBS_SORT);
+            return true;
+        case R.id.menu_item_pin:
+            startActivity(new Intent(this, PinActivity.class));
+            return true;
+        case R.id.menu_item_setting:
+            startActivityForResult(new Intent(this, ReaderPreferenceActivity.class),
+                REQUEST_PREFERENCES);
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public void onListItemClick(ListView l, View v, int position, long id) {
+        Long subId = (Long) v.getTag();
+        if (subId != null) {
+            startActivity(new Intent(this, ItemActivity.class)
+                .putExtra(EXTRA_SUBSCRIPTION_ID, subId));
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        switch (requestCode) {
+        case REQUEST_PREFERENCES:
+            initListAdapter();
+            break;
+        }
+    }
+
+    private void initListAdapter() {
+        if (this.subsAdapter != null && !this.subsAdapter.cursor.isClosed()) {
+            this.subsAdapter.cursor.close();
+        }
+        Context context = getApplicationContext();
+        String where = null;
+        if (ReaderPreferences.isViewUnreadOnly(context)) {
+            where = Subscription._UNREAD_COUNT + " > 0";
+        }
+        int subsSort = ReaderPreferences.getSubsSort(context);
+        if (subsSort < 1 || subsSort > Subscription.SORT_ORDERS.length) {
+            subsSort = 1;
+        }
+        String orderby = Subscription.SORT_ORDERS[subsSort - 1];
+        this.subsAdapter = new SubsAdapter(this, managedQuery(
+            Subscription.CONTENT_URI, null, where, null, orderby));
+        setListAdapter(this.subsAdapter);
+
+        View message = findViewById(R.id.message);
+        if (this.subsAdapter.cursor.getCount() == 0) {
+            message.setVisibility(View.VISIBLE);
+        } else {
+            message.setVisibility(View.INVISIBLE);
+        }
+    }
+
+    private void startSync() {
+        if (this.readerService.startSync()) {
+            showToast(getString(R.string.msg_sync_started));
+        } else {
+            showToast(getString(R.string.msg_sync_running));
+        }
+    }
+
+    static void bindTitle(Activity a) {
+        String loginId = ReaderPreferences.getLoginId(a.getApplicationContext());
+        if (loginId != null) {
+            StringBuilder buff = new StringBuilder(64);
+            buff.append(a.getText(R.string.app_name));
+            buff.append(" - ");
+            buff.append(loginId);
+            a.setTitle(new String(buff));
+        }
+    }
+
     private void showToast(IOException e) {
         e.printStackTrace();
         showToast(getText(R.string.err_io) + " (" + e.getLocalizedMessage() + ")");
@@ -201,38 +239,6 @@ public class SubscriptionActivity extends ListActivity {
                 Toast.makeText(getApplicationContext(), text, Toast.LENGTH_SHORT).show();
             }
         });
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.subscription, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-        case R.id.menu_item_reload:
-            startSync();
-            return true;
-        case R.id.menu_item_subs_sort:
-            showDialog(DIALOG_SUBS_SORT);
-            return true;
-        case R.id.menu_item_setting:
-            startActivity(new Intent(this, ReaderPreferenceActivity.class));
-            return true;
-        }
-        return false;
-    }
-
-    @Override
-    public void onListItemClick(ListView l, View v, int position, long id) {
-        Long subId = (Long) v.getTag();
-        if (subId != null) {
-            startActivity(new Intent(this, ItemActivity.class)
-                .putExtra(EXTRA_SUBSCRIPTION_ID, subId));
-        }
     }
 
     private class SubsAdapter extends BaseAdapter {

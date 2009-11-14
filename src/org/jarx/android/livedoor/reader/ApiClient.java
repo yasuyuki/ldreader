@@ -48,6 +48,10 @@ public class ApiClient {
     private static final String URL_API_ALL = URL_API_BASE + "/all";
     private static final String URL_API_UNREAD = URL_API_BASE + "/unread";
     private static final String URL_API_TOUCH_ALL = URL_API_BASE + "/touch_all";
+    private static final String URL_API_PIN_ALL = URL_API_BASE + "/pin/all";
+    private static final String URL_API_PIN_ADD = URL_API_BASE + "/pin/add";
+    private static final String URL_API_PIN_REMOVE = URL_API_BASE + "/pin/remove";
+    private static final String URL_API_PIN_CLEAR = URL_API_BASE + "/pin/clear";
     private static final String URL_RPC_NOTIFY = "http://rpc.reader.livedoor.com/notify";
 
     private final JSONParser parser = new JSONParser();
@@ -235,6 +239,67 @@ public class ApiClient {
         params.add(new BasicNameValuePair("subscribe_id", Long.toString(subId)));
 
         JSONObject result = toJSONObject(doPostReader(URL_API_TOUCH_ALL, params));
+        int errorCode = asInt(result.get("ErrorCode"));
+        int isSuccess = asInt(result.get("isSuccess"));
+        return (errorCode == 0 && isSuccess == 1);
+    }
+
+    /** implements /api/pin/all */
+    public java.io.Reader readPinAll()
+            throws IOException, ReaderException {
+        initApiKey();
+
+        List<NameValuePair> params = new ArrayList<NameValuePair>(3);
+        params.add(new BasicNameValuePair("apiKey", this.apiKey));
+
+        return doPostReader(URL_API_PIN_ALL, params);
+    }
+
+    public void handlePinAll(ContentHandler handler)
+            throws IOException, ParseException, ReaderException {
+        this.parser.parse(readPinAll(), handler);
+    }
+
+    /** implements /api/pin/add */
+    public boolean pinAdd(String link, String title)
+            throws IOException, ParseException, ReaderException {
+        initApiKey();
+
+        List<NameValuePair> params = new ArrayList<NameValuePair>(3);
+        params.add(new BasicNameValuePair("apiKey", this.apiKey));
+        params.add(new BasicNameValuePair("link", link));
+        params.add(new BasicNameValuePair("title", title));
+
+        JSONObject result = toJSONObject(doPostReader(URL_API_PIN_ADD, params));
+        int errorCode = asInt(result.get("ErrorCode"));
+        int isSuccess = asInt(result.get("isSuccess"));
+        return (errorCode == 0 && isSuccess == 1);
+    }
+
+    /** implements /api/pin/add */
+    public boolean pinRemove(String link)
+            throws IOException, ParseException, ReaderException {
+        initApiKey();
+
+        List<NameValuePair> params = new ArrayList<NameValuePair>(2);
+        params.add(new BasicNameValuePair("apiKey", this.apiKey));
+        params.add(new BasicNameValuePair("link", link));
+
+        JSONObject result = toJSONObject(doPostReader(URL_API_PIN_REMOVE, params));
+        int errorCode = asInt(result.get("ErrorCode"));
+        int isSuccess = asInt(result.get("isSuccess"));
+        return (errorCode == 0 && isSuccess == 1);
+    }
+
+    /** implements /api/pin/add */
+    public boolean pinClear()
+            throws IOException, ParseException, ReaderException {
+        initApiKey();
+
+        List<NameValuePair> params = new ArrayList<NameValuePair>(1);
+        params.add(new BasicNameValuePair("apiKey", this.apiKey));
+
+        JSONObject result = toJSONObject(doPostReader(URL_API_PIN_CLEAR, params));
         int errorCode = asInt(result.get("ErrorCode"));
         int isSuccess = asInt(result.get("isSuccess"));
         return (errorCode == 0 && isSuccess == 1);

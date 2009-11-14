@@ -19,6 +19,12 @@
         <item>Subscribers asc</item>
     </string-array>
 
+    <string-array name="dialog_pin_action_items">
+        <item>Browse</item>
+        <item>Copy URL</item>
+        <item>Remove</item>
+    </string-array>
+
     <string-array name="sync_interval_hours_labels">
         <item>Manual</item>
         <item>Every 1 hour</item>

@@ -14,8 +14,13 @@
     <string name="msg_sync_running">Synchronization running.</string>
     <string name="msg_sync_running_read">Item not found. Synchronization running.</string>
     <string name="msg_sync_finished">{0} items synchronized. (unreads {1})</string>
+    <string name="msg_pin_all_running">Pin synchronization running.</string>
+    <string name="msg_pin_add_running">Pin adding.</string>
+    <string name="msg_pin_remove_running">Pin removing.</string>
+    <string name="msg_no_subscription">Feed not found.</string>
     <string name="msg_no_item_for_title">(Item not found)</string>
     <string name="msg_no_item">Item not found.</string>
+    <string name="msg_no_pin">Pin not found.</string>
     <string name="msg_touch_all_local">Marked all read in this feed</string>
 
     <string name="err_io">Network error</string>
@@ -27,8 +32,11 @@
     <string name="txt_get_account">GET livedoor ID</string>
     <string name="txt_unreads">Unreads</string>
     <string name="txt_reads">Reads</string>
+    <string name="txt_clear_all">Clear all</string>
+    <string name="txt_share_urls">Share URLs</string>
 
     <string name="login_title">Login</string>
+    <string name="pin_title">Pin list</string>
 
     <string name="dialog_subs_view_title">Select View Type</string>
     <string name="dialog_subs_sort_title">Select Sort Type</string>
