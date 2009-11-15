@@ -105,8 +105,8 @@ public class SubscriptionActivity extends ListActivity {
         super.onDestroy();
         unbindService(this.serviceConn);
         unregisterReceiver(this.refreshReceiver);
-        if (this.subsAdapter != null && !this.subsAdapter.cursor.isClosed()) {
-            this.subsAdapter.cursor.close();
+        if (this.subsAdapter != null ) {
+            this.subsAdapter.closeCursor();
         }
     }
 
@@ -178,10 +178,7 @@ public class SubscriptionActivity extends ListActivity {
         }
     }
 
-    private void initListAdapter() {
-        if (this.subsAdapter != null && !this.subsAdapter.cursor.isClosed()) {
-            this.subsAdapter.cursor.close();
-        }
+    private synchronized void initListAdapter() {
         Context context = getApplicationContext();
         String where = null;
         if (ReaderPreferences.isViewUnreadOnly(context)) {
@@ -192,9 +189,14 @@ public class SubscriptionActivity extends ListActivity {
             subsSort = 1;
         }
         String orderby = Subscription.SORT_ORDERS[subsSort - 1];
-        this.subsAdapter = new SubsAdapter(this, managedQuery(
-            Subscription.CONTENT_URI, null, where, null, orderby));
-        setListAdapter(this.subsAdapter);
+        Cursor cursor = managedQuery(Subscription.CONTENT_URI,
+            null, where, null, orderby);
+        if (this.subsAdapter == null) {
+            this.subsAdapter = new SubsAdapter(this, cursor);
+            setListAdapter(this.subsAdapter);
+        } else {
+            this.subsAdapter.setCursor(cursor);
+        }
 
         View message = findViewById(R.id.message);
         if (this.subsAdapter.cursor.getCount() == 0) {
@@ -246,10 +248,23 @@ public class SubscriptionActivity extends ListActivity {
         private Subscription.FilterCursor cursor;
         private LayoutInflater inflater;
 
-        public SubsAdapter(Context context, Cursor cursor) {
+        private SubsAdapter(Context context, Cursor cursor) {
             this.cursor = new Subscription.FilterCursor(cursor);
             this.inflater = (LayoutInflater) context.getSystemService(
                 Context.LAYOUT_INFLATER_SERVICE);
+        }
+
+        private void closeCursor() {
+            if (this.cursor != null && !this.cursor.isClosed()) {
+                this.cursor.close();
+            }
+            this.cursor = null;
+        }
+
+        private void setCursor(Cursor cursor) {
+            closeCursor();
+            this.cursor = new Subscription.FilterCursor(cursor);
+            notifyDataSetChanged();
         }
 
         @Override
@@ -257,14 +272,17 @@ public class SubscriptionActivity extends ListActivity {
             return this.cursor.getCount();
         }
 
+        @Override
         public Object getItem(int position) {
             return position;
         }
 
+        @Override
         public long getItemId(int position) {
             return position;
         }
 
+        @Override
         public View getView(int position, View convertView, ViewGroup parent) {
             View view;
             if (convertView == null) {
