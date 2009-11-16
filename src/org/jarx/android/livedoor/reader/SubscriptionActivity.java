@@ -18,7 +18,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -26,14 +25,14 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.View.OnClickListener;
 import android.view.Window;
-import android.widget.ArrayAdapter; 
-import android.widget.BaseAdapter;
-import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.RatingBar;
+import android.widget.ResourceCursorAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import android.database.DataSetObserver;
 
 public class SubscriptionActivity extends ListActivity {
 
@@ -43,9 +42,11 @@ public class SubscriptionActivity extends ListActivity {
     private static final int REQUEST_PREFERENCES = 1;
     private static final int DIALOG_SUBS_VIEW = 1;
     private static final int DIALOG_SUBS_SORT = 2;
+
     private final Handler handler = new Handler();
     private SubsAdapter subsAdapter;
     private ReaderService readerService;
+    private int lastPosition;
 
     private ServiceConnection serviceConn = new ServiceConnection() {
         @Override
@@ -76,9 +77,8 @@ public class SubscriptionActivity extends ListActivity {
         setContentView(R.layout.subscription);
         w.setFeatureDrawableResource(Window.FEATURE_LEFT_ICON, R.drawable.icon_s);
 
-        Intent intent = new Intent(this, ReaderService.class);
-        startService(intent);
-        bindService(intent, this.serviceConn, Context.BIND_AUTO_CREATE);
+        bindService(new Intent(this, ReaderService.class),
+            this.serviceConn, Context.BIND_AUTO_CREATE);
 
         registerReceiver(this.refreshReceiver,
             new IntentFilter(ReaderService.ACTION_SYNC_SUBS_FINISHED));
@@ -90,13 +90,20 @@ public class SubscriptionActivity extends ListActivity {
     @Override
     public void onResume() {
         super.onResume();
+        if (this.subsAdapter != null
+                && this.lastPosition < this.subsAdapter.getCount()) {
+            setSelection(this.lastPosition);
+        }
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        if (this.subsAdapter != null && !this.subsAdapter.cursor.isClosed()) {
-            this.subsAdapter.cursor.deactivate();
+        if (this.subsAdapter != null) {
+            Cursor cursor = this.subsAdapter.getCursor();
+            if (cursor != null && !cursor.isClosed()) {
+                cursor.deactivate();
+            }
         }
     }
 
@@ -164,6 +171,7 @@ public class SubscriptionActivity extends ListActivity {
     public void onListItemClick(ListView l, View v, int position, long id) {
         Long subId = (Long) v.getTag();
         if (subId != null) {
+            this.lastPosition = position;
             startActivity(new Intent(this, ItemActivity.class)
                 .putExtra(EXTRA_SUBSCRIPTION_ID, subId));
         }
@@ -179,6 +187,8 @@ public class SubscriptionActivity extends ListActivity {
     }
 
     private synchronized void initListAdapter() {
+        this.lastPosition = 0;
+
         Context context = getApplicationContext();
         String where = null;
         if (ReaderPreferences.isViewUnreadOnly(context)) {
@@ -195,14 +205,21 @@ public class SubscriptionActivity extends ListActivity {
             this.subsAdapter = new SubsAdapter(this, cursor);
             setListAdapter(this.subsAdapter);
         } else {
-            this.subsAdapter.setCursor(cursor);
+            this.subsAdapter.changeCursor(cursor);
         }
+        bindMessageView();
+    }
 
+    private void bindMessageView() {
         View message = findViewById(R.id.message);
-        if (this.subsAdapter.cursor.getCount() == 0) {
-            message.setVisibility(View.VISIBLE);
+        if (this.subsAdapter == null || this.subsAdapter.getCount() == 0) {
+            if (message.getVisibility() != View.VISIBLE) {
+                message.setVisibility(View.VISIBLE);
+            }
         } else {
-            message.setVisibility(View.INVISIBLE);
+            if (message.getVisibility() != View.INVISIBLE) {
+                message.setVisibility(View.INVISIBLE);
+            }
         }
     }
 
@@ -243,80 +260,56 @@ public class SubscriptionActivity extends ListActivity {
         });
     }
 
-    private class SubsAdapter extends BaseAdapter {
-
-        private Subscription.FilterCursor cursor;
-        private LayoutInflater inflater;
+    private class SubsAdapter extends ResourceCursorAdapter {
 
         private SubsAdapter(Context context, Cursor cursor) {
-            this.cursor = new Subscription.FilterCursor(cursor);
-            this.inflater = (LayoutInflater) context.getSystemService(
-                Context.LAYOUT_INFLATER_SERVICE);
+            super(context, R.layout.subscription_row,
+                new Subscription.FilterCursor(cursor));
         }
 
         private void closeCursor() {
-            if (this.cursor != null && !this.cursor.isClosed()) {
-                this.cursor.close();
+            Cursor cursor = getCursor();
+            if (cursor != null && !cursor.isClosed()) {
+                cursor.close();
             }
-            this.cursor = null;
-        }
-
-        private void setCursor(Cursor cursor) {
-            closeCursor();
-            this.cursor = new Subscription.FilterCursor(cursor);
-            notifyDataSetChanged();
         }
 
         @Override
-        public int getCount() {
-            return this.cursor.getCount();
+        public void changeCursor(Cursor cursor) {
+            super.changeCursor(new Subscription.FilterCursor(cursor));
         }
 
         @Override
-        public Object getItem(int position) {
-            return position;
-        }
+        public void bindView(View view, Context context, Cursor cursor) {
+            Subscription.FilterCursor subCursor = (Subscription.FilterCursor) cursor;
 
-        @Override
-        public long getItemId(int position) {
-            return position;
-        }
-
-        @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
-            View view;
-            if (convertView == null) {
-                view = this.inflater.inflate(R.layout.subscription_row, parent, false);
-            } else {
-                view = convertView;
-            }
             ImageView iconView = (ImageView) view.findViewById(R.id.icon);
             TextView titleView = (TextView) view.findViewById(R.id.title);
             RatingBar ratingBar = (RatingBar) view.findViewById(R.id.rating_bar);
             TextView etcView = (TextView) view.findViewById(R.id.etc);
 
-            if (this.cursor.moveToPosition(position)) {
-                Subscription sub = this.cursor.getSubscription();
-                titleView.setText(sub.getTitle() + " (" + sub.getUnreadCount() + ")");
-                ratingBar.setRating(sub.getRate());
-                iconView.setImageBitmap(sub.getIcon());
+            Subscription sub = subCursor.getSubscription();
+            titleView.setText(sub.getTitle() + " (" + sub.getUnreadCount() + ")");
+            ratingBar.setRating(sub.getRate());
+            iconView.setImageBitmap(sub.getIcon());
 
-                StringBuilder buff = new StringBuilder(64);
-                buff.append(sub.getSubscribersCount());
-                buff.append(" users");
-                String folder = sub.getFolder();
-                if (folder != null && folder.length() > 0) {
-                    buff.append(" | ");
-                    buff.append(folder);
-                }
-                etcView.setText(new String(buff));
-
-                view.setTag(sub.getId());
-            } else {
-                titleView.setText("(Subscription Error)");
-                view.setTag(null);
+            StringBuilder buff = new StringBuilder(64);
+            buff.append(sub.getSubscribersCount());
+            buff.append(" users");
+            String folder = sub.getFolder();
+            if (folder != null && folder.length() > 0) {
+                buff.append(" | ");
+                buff.append(folder);
             }
-            return view;
+            etcView.setText(new String(buff));
+
+            view.setTag(sub.getId());
+        }
+
+        @Override
+        protected void onContentChanged() {
+            super.onContentChanged();
+            SubscriptionActivity.this.bindMessageView();
         }
     }
 }

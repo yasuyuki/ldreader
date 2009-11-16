@@ -2,6 +2,7 @@ package org.jarx.android.livedoor.reader;
 
 import java.io.Serializable;
 import android.database.Cursor;
+import android.database.CursorWrapper;
 import android.net.Uri;
 import android.provider.BaseColumns;
 import static org.jarx.android.livedoor.reader.Utils.*; 
@@ -106,10 +107,10 @@ public class Pin implements Cloneable, Serializable, BaseColumns {
         }
     }
 
-    public static class FilterCursor {
+    public static class FilterCursor extends CursorWrapper {
 
-        private final Pin pin;
         private final Cursor cursor;
+        private final Pin pin;
         private final int posId;
         private final int posUri;
         private final int posTitle;
@@ -121,8 +122,9 @@ public class Pin implements Cloneable, Serializable, BaseColumns {
         }
 
         public FilterCursor(Cursor cursor, Pin pin) {
-            this.pin = pin;
+            super(cursor);
             this.cursor = cursor;
+            this.pin = pin;
             this.posId = cursor.getColumnIndex(Pin._ID);
             this.posUri = cursor.getColumnIndex(Pin._URI);
             this.posTitle = cursor.getColumnIndex(Pin._TITLE);
@@ -140,36 +142,8 @@ public class Pin implements Cloneable, Serializable, BaseColumns {
             return pin;
         }
 
-        public int getCount() {
-            return this.cursor.getCount();
-        }
-
-        public boolean moveToPosition(int position) {
-            return this.cursor.moveToPosition(position);
-        }
-
-        public boolean moveToNext() {
-            return this.cursor.moveToNext();
-        }
-
         public Cursor getCursor() {
             return this.cursor;
-        }
-
-        public void deactivate() {
-            this.cursor.deactivate();
-        }
-
-        public boolean requery() {
-            return this.cursor.requery();
-        }
-
-        public boolean isClosed() {
-            return this.cursor.isClosed();
-        }
-
-        public void close() {
-            this.cursor.close();
         }
     }
 }

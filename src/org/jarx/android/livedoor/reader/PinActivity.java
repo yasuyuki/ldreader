@@ -6,7 +6,6 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ListActivity;
 import android.app.ProgressDialog;
-import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -20,16 +19,11 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.text.ClipboardManager;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.View.OnClickListener;
 import android.view.Window;
-import android.widget.ArrayAdapter; 
-import android.widget.BaseAdapter;
-import android.widget.Button;
-import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.ResourceCursorAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -115,8 +109,11 @@ public class PinActivity extends ListActivity {
     @Override
     public void onPause() {
         super.onPause();
-        if (this.pinsAdapter != null && !this.pinsAdapter.cursor.isClosed()) {
-            this.pinsAdapter.cursor.deactivate();
+        if (this.pinsAdapter != null) {
+            Cursor cursor = this.pinsAdapter.getCursor();
+            if (cursor != null && !cursor.isClosed()) {
+                cursor.deactivate();
+            }
         }
     }
 
@@ -124,8 +121,8 @@ public class PinActivity extends ListActivity {
     public void onDestroy() {
         super.onDestroy();
         unbindService(this.serviceConn);
-        if (this.pinsAdapter != null && !this.pinsAdapter.cursor.isClosed()) {
-            this.pinsAdapter.cursor.close();
+        if (this.pinsAdapter != null) {
+            this.pinsAdapter.closeCursor();
         }
     }
 
@@ -145,16 +142,16 @@ public class PinActivity extends ListActivity {
     }
 
     private void initListAdapter() {
-        if (this.pinsAdapter != null && !this.pinsAdapter.cursor.isClosed()) {
-            this.pinsAdapter.cursor.close();
+        if (this.pinsAdapter == null) {
+            this.pinsAdapter = new PinsAdapter(this, listQuery());
+            setListAdapter(this.pinsAdapter);
+        } else {
+            this.pinsAdapter.changeCursor(listQuery());
         }
-
-        this.pinsAdapter = new PinsAdapter(this, listQuery());
-        setListAdapter(this.pinsAdapter);
 
         View controls = findViewById(R.id.controls);
         View message = findViewById(R.id.message);
-        if (this.pinsAdapter.cursor.getCount() == 0) {
+        if (this.pinsAdapter.getCount() == 0) {
             controls.setVisibility(View.INVISIBLE);
             message.setVisibility(View.VISIBLE);
         } else {
@@ -257,51 +254,35 @@ public class PinActivity extends ListActivity {
         });
     }
 
-    private class PinsAdapter extends BaseAdapter {
-
-        private Pin.FilterCursor cursor;
-        private LayoutInflater inflater;
+    private class PinsAdapter extends ResourceCursorAdapter {
 
         public PinsAdapter(Context context, Cursor cursor) {
-            this.cursor = new Pin.FilterCursor(cursor);
-            this.inflater = (LayoutInflater) context.getSystemService(
-                Context.LAYOUT_INFLATER_SERVICE);
+            super(context, R.layout.pin_row, new Pin.FilterCursor(cursor));
+        }
+
+        private void closeCursor() {
+            Cursor cursor = getCursor();
+            if (cursor != null && !cursor.isClosed()) {
+                cursor.close();
+            }
         }
 
         @Override
-        public int getCount() {
-            return this.cursor.getCount();
+        public void changeCursor(Cursor cursor) {
+            super.changeCursor(new Pin.FilterCursor(cursor));
         }
 
-        public Object getItem(int position) {
-            return position;
-        }
-
-        public long getItemId(int position) {
-            return position;
-        }
-
-        public View getView(int position, View convertView, ViewGroup parent) {
-            View view;
-            if (convertView == null) {
-                view = this.inflater.inflate(R.layout.pin_row, parent, false);
-            } else {
-                view = convertView;
-            }
+        @Override
+        public void bindView(View view, Context context, Cursor cursor) {
+            Pin.FilterCursor pinCursor = (Pin.FilterCursor) cursor;
 
             TextView titleView = (TextView) view.findViewById(R.id.title);
             TextView uriView = (TextView) view.findViewById(R.id.uri);
-            if (this.cursor.moveToPosition(position)) {
-                Pin pin = this.cursor.getPin();
-                titleView.setText(pin.getTitle());
-                uriView.setText(pin.getUri());
-                view.setTag(pin.clone());
-            } else {
-                titleView.setText("(Pin Error)");
-                view.setTag(null);
-            }
 
-            return view;
+            Pin pin = pinCursor.getPin();
+            titleView.setText(pin.getTitle());
+            uriView.setText(pin.getUri());
+            view.setTag(pin.clone());
         }
     }
 
