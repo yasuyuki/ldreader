@@ -99,12 +99,6 @@ public class SubscriptionActivity extends ListActivity {
     @Override
     public void onPause() {
         super.onPause();
-        if (this.subsAdapter != null) {
-            Cursor cursor = this.subsAdapter.getCursor();
-            if (cursor != null && !cursor.isClosed()) {
-                cursor.deactivate();
-            }
-        }
     }
 
     @Override

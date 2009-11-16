@@ -291,12 +291,10 @@ public class ReaderManager {
             }
 
             boolean success = this.client.pinAdd(uri, title);
-            if (success) {
-                cr.delete(Pin.CONTENT_URI, Pin._URI + " = ? and " + Pin._ACTION
-                    + " = " + Pin.ACTION_NONE, new String[]{uri});
-                values.put(Pin._ACTION, Pin.ACTION_NONE);
-                cr.update(pinUri, values, null, null);
-            }
+            cr.delete(Pin.CONTENT_URI, Pin._URI + " = ? and " + Pin._ACTION
+                + " = " + Pin.ACTION_NONE, new String[]{uri});
+            values.put(Pin._ACTION, Pin.ACTION_NONE);
+            cr.update(pinUri, values, null, null);
             return success;
         } catch (ParseException e) {
             throw new ReaderException("json parse error", e);
@@ -322,9 +320,7 @@ public class ReaderManager {
             }
 
             boolean success = this.client.pinRemove(uri);
-            if (success) {
-                cr.delete(pinUri, null, null);
-            }
+            cr.delete(pinUri, null, null);
             return success;
         } catch (ParseException e) {
             throw new ReaderException("json parse error", e);
