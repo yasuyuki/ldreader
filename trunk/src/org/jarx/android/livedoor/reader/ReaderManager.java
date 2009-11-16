@@ -128,9 +128,6 @@ public class ReaderManager {
             throw new ReaderException("json parse error", e);
         }
 
-        this.context.sendBroadcast(
-            new Intent(ReaderService.ACTION_SYNC_SUBS_FINISHED));
-
         return syncCount;
     }
 
@@ -382,8 +379,6 @@ public class ReaderManager {
                     }
                     this.values.put(Subscription._UNREAD_COUNT, this.unreadCount);
                     this.cr.insert(Subscription.CONTENT_URI, this.values);
-                    ReaderManager.this.context.sendBroadcast(
-                        new Intent(ReaderService.ACTION_SYNC_SUBS_FINISHED));
                 }
                 this.ids.add(id);
                 this.values = null;

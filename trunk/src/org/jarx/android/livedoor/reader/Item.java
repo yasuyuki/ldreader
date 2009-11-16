@@ -2,6 +2,7 @@ package org.jarx.android.livedoor.reader;
 
 import java.io.Serializable;
 import android.database.Cursor;
+import android.database.CursorWrapper;
 import android.net.Uri;
 import android.provider.BaseColumns;
 import static org.jarx.android.livedoor.reader.Utils.*; 
@@ -138,10 +139,10 @@ public class Item implements Serializable, BaseColumns {
         return Math.max(this.createdTime, this.modifiedTime);
     }
 
-    public static class FilterCursor {
+    public static class FilterCursor extends CursorWrapper {
 
-        private final Item item;
         private final Cursor cursor;
+        private final Item item;
         private final int posId;
         private final int posSubscriptionId;
         private final int posUri;
@@ -157,8 +158,9 @@ public class Item implements Serializable, BaseColumns {
         }
 
         public FilterCursor(Cursor cursor, Item item) {
-            this.item = item;
+            super(cursor);
             this.cursor = cursor;
+            this.item = item;
             this.posId = cursor.getColumnIndex(Item._ID);
             this.posSubscriptionId = cursor.getColumnIndex(Item._SUBSCRIPTION_ID);
             this.posUri = cursor.getColumnIndex(Item._URI);
@@ -184,36 +186,8 @@ public class Item implements Serializable, BaseColumns {
             return item;
         }
 
-        public int getCount() {
-            return this.cursor.getCount();
-        }
-
-        public boolean moveToPosition(int position) {
-            return this.cursor.moveToPosition(position);
-        }
-
-        public boolean moveToNext() {
-            return this.cursor.moveToNext();
-        }
-
         public Cursor getCursor() {
             return this.cursor;
-        }
-
-        public void deactivate() {
-            this.cursor.deactivate();
-        }
-
-        public boolean requery() {
-            return this.cursor.requery();
-        }
-
-        public boolean isClosed() {
-            return this.cursor.isClosed();
-        }
-
-        public void close() {
-            this.cursor.close();
         }
     }
 }

@@ -3,6 +3,7 @@ package org.jarx.android.livedoor.reader;
 import java.io.Serializable;
 import java.util.Comparator;
 import android.database.Cursor;
+import android.database.CursorWrapper;
 import android.graphics.BitmapFactory;
 import android.graphics.Bitmap;
 import android.net.Uri;
@@ -219,10 +220,10 @@ public final class Subscription implements Serializable, BaseColumns {
         return "Subscription{id=" + this.id + ",title=" + this.title + "}";
     }
 
-    public static class FilterCursor {
+    public static class FilterCursor extends CursorWrapper {
 
-        private final Subscription sub;
         private final Cursor cursor;
+        private final Subscription sub;
         private final int posId;
         private final int posUri;
         private final int posTitle;
@@ -241,8 +242,9 @@ public final class Subscription implements Serializable, BaseColumns {
         }
 
         public FilterCursor(Cursor cursor, Subscription sub) {
-            this.sub = sub;
+            super(cursor);
             this.cursor = cursor;
+            this.sub = sub;
             this.posId = cursor.getColumnIndex(Subscription._ID);
             this.posUri = cursor.getColumnIndex(Subscription._URI);
             this.posTitle = cursor.getColumnIndex(Subscription._TITLE);
@@ -279,36 +281,8 @@ public final class Subscription implements Serializable, BaseColumns {
             return sub;
         }
 
-        public int getCount() {
-            return this.cursor.getCount();
-        }
-
-        public boolean moveToPosition(int position) {
-            return this.cursor.moveToPosition(position);
-        }
-
-        public boolean moveToNext() {
-            return this.cursor.moveToNext();
-        }
-
         public Cursor getCursor() {
             return this.cursor;
-        }
-
-        public void deactivate() {
-            this.cursor.deactivate();
-        }
-
-        public boolean requery() {
-            return this.cursor.requery();
-        }
-
-        public boolean isClosed() {
-            return this.cursor.isClosed();
-        }
-
-        public void close() {
-            this.cursor.close();
         }
     }
 }

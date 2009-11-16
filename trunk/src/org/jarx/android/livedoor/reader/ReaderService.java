@@ -161,10 +161,14 @@ public class ReaderService extends Service {
 
     private void notifySyncFinished(int syncCount) {
         Log.d(TAG, "notifySyncFinished(" + syncCount + ")");
-        ReaderManager rm = ReaderManager.newInstance(getApplicationContext());
+
+        Context context = getApplicationContext();
+        ReaderManager rm = ReaderManager.newInstance(context);
         int unreadCount = rm.countUnread();
         String msg = this.syncFinishedFormat.format(new Integer[]{syncCount, unreadCount});
         sendNotify(android.R.drawable.stat_notify_sync, msg);
+
+        context.sendBroadcast(new Intent(ACTION_SYNC_SUBS_FINISHED));
     }
 
     private void notifySyncError(IOException e) {
