@@ -14,6 +14,7 @@ public class ReaderPreferences {
     public static final String PREFS_KEY_SYNC_UNREAD_ONLY = "sync_unread_only";
     public static final String PREFS_KEY_AUTO_TOUCH_ALL = "auto_touch_all";
     public static final String PREFS_KEY_VIEW_UNREAD_ONLY = "view_unread_only";
+    public static final String PREFS_KEY_DISABLE_ITEM_LINKS = "disable_item_links";
 
     public static final int SUBS_VIEW_FLAT = 1;
     public static final int SUBS_VIEW_FOLDER = 2;
@@ -96,5 +97,9 @@ public class ReaderPreferences {
 
     public static boolean isViewUnreadOnly(Context c) {
         return getBoolean(c, PREFS_KEY_VIEW_UNREAD_ONLY, false);
+    }
+
+    public static boolean isDisableItemLinks(Context c) {
+        return getBoolean(c, PREFS_KEY_DISABLE_ITEM_LINKS, false);
     }
 }

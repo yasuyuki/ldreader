@@ -129,7 +129,7 @@ public class LoginActivity extends Activity {
 
         showDialog(DIALOG_PROGRESS);
 
-        this.handler.postDelayed(new Runnable() {
+        new Thread() {
             public void run() {
                 ReaderManager rm = ReaderManager.newInstance(c);
                 boolean success = false;
@@ -142,7 +142,7 @@ public class LoginActivity extends Activity {
                     }
                 } catch (final IOException e) {
                     showToast(e);
-                } catch (final ReaderException e) {
+                } catch (final Throwable e) {
                     showToast(e);
                 }
                 final boolean finish = success;
@@ -155,7 +155,7 @@ public class LoginActivity extends Activity {
                     }
                 });
             }
-        }, 100);
+        }.start();
     }
 
     private void showToast(IOException e) {
@@ -163,7 +163,7 @@ public class LoginActivity extends Activity {
         showToast(getText(R.string.err_io) + " (" + e.getLocalizedMessage() + ")");
     }
 
-    private void showToast(ReaderException e) {
+    private void showToast(Throwable e) {
         showToast(e.getLocalizedMessage());
     }
 

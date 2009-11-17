@@ -32,8 +32,6 @@ import android.widget.ResourceCursorAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import android.database.DataSetObserver;
-
 public class SubscriptionActivity extends ListActivity {
 
     public static final String EXTRA_SUBSCRIPTION_ID = "subscriptionId";
@@ -117,7 +115,7 @@ public class SubscriptionActivity extends ListActivity {
         switch (id) {
         case DIALOG_SUBS_SORT:
             int defaultWhich = ReaderPreferences.getSubsSort(context) - 1;
-            return new AlertDialog.Builder(SubscriptionActivity.this)
+            return new AlertDialog.Builder(this)
                 .setIcon(R.drawable.alert_dialog_icon)
                 .setTitle(R.string.dialog_subs_sort_title)
                 .setSingleChoiceItems(R.array.dialog_subs_sort_items, defaultWhich,

@@ -6,14 +6,15 @@
 
     <ListView android:id="@android:id/list"
             android:layout_width="fill_parent"
-            android:layout_height="0dip"
-            android:layout_weight="1"
+            android:layout_height="wrap_content"
             android:textSize="12px"
-            android:drawSelectorOnTop="false" />
+            android:layout_weight="1"
+            android:drawSelectorOnTop="false"
+            android:layout_marginBottom="10dip" />
 
-    <FrameLayout
+    <FrameLayout android:id="@+id/controls_bar"
             android:layout_width="fill_parent"
-            android:layout_height="fill_parent">
+            android:layout_height="wrap_content">
 
         <LinearLayout android:id="@+id/controls"
                 android:orientation="horizontal"

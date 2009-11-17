@@ -55,11 +55,6 @@ public class ReaderService extends Service {
     }
 
     @Override
-    public synchronized void onStart(Intent intent, int startId) {
-        super.onStart(intent, startId);
-    }
-
-    @Override
     public void onDestroy() {
         super.onDestroy();
         cancelSyncTimer();
@@ -129,6 +124,8 @@ public class ReaderService extends Service {
                     ReaderService.this.notifySyncError(e);
                 } catch (ReaderException e) {
                     ReaderService.this.notifySyncError(e);
+                } catch (Throwable e) {
+                    ReaderService.this.notifySyncError(e);
                 } finally {
                     ReaderService.this.setSyncRunning(false);
                 }
@@ -149,7 +146,7 @@ public class ReaderService extends Service {
         }
     }
 
-    private synchronized void setSyncRunning(boolean syncRunning) {
+    private void setSyncRunning(boolean syncRunning) {
         this.syncRunning = syncRunning;
     }
 
@@ -177,7 +174,7 @@ public class ReaderService extends Service {
             getText(R.string.err_io) + "(" + e.getLocalizedMessage() + ")");
     }
 
-    private void notifySyncError(ReaderException e) {
+    private void notifySyncError(Throwable e) {
         e.printStackTrace();
         sendNotify(R.drawable.stat_notify_sync_error, e.getLocalizedMessage());
     }

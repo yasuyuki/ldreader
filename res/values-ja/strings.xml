@@ -22,6 +22,7 @@
     <string name="msg_no_item">記事はありません</string>
     <string name="msg_no_pin">ピンはありません</string>
     <string name="msg_touch_all_local">このフィードの記事すべてを既読にしました</string>
+    <string name="msg_confirm_browse">ブラウザを起動しますか？</string>
 
     <string name="err_io">通信エラーが発生しました</string>
 
@@ -55,6 +56,8 @@
     <string name="preference_category_view">表示設定</string>
     <string name="preference_view_unread_only_title">既読フィードを隠す</string>
     <string name="preference_view_unread_only_summary">未読が 0件の既読フィードは表示しません</string>
+    <string name="preference_view_disable_item_links_title">記事中のリンクを無効</string>
+    <string name="preference_view_disable_item_links_summary">記事中の URL をクリックしてもブラウザを起動しません</string>
 
     <string name="preference_category_info">情報</string>
     <string name="preference_info_about_title">LDReader について</string>

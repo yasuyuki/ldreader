@@ -4,12 +4,14 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.ContentValues;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.database.Cursor;
@@ -17,6 +19,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -27,6 +30,7 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
+import android.webkit.WebViewClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.widget.Button;
@@ -36,6 +40,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 public class ItemActivity extends Activity {
+
+    private static final String TAG = "ItemActivity";
 
     private Subscription sub;
     private Item currentItem;
@@ -106,6 +112,7 @@ public class ItemActivity extends Activity {
 
         final WebView bodyView = (WebView) findViewById(R.id.item_body);
         bodyView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
@@ -116,6 +123,29 @@ public class ItemActivity extends Activity {
                     break;
                 }
                 return false;
+            }
+        });
+        bodyView.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, final String url) {
+                if (ReaderPreferences.isDisableItemLinks(getApplicationContext())) {
+                    return true;
+                }
+                new AlertDialog.Builder(ItemActivity.this)
+                    .setTitle(R.string.msg_confirm_browse)
+                    .setMessage(url)
+                    .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int whichButton) {
+                            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            startActivity(intent);
+                        }
+                    })
+                    .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int whichButton) {
+                        }
+                    }).show();
+                return true;
             }
         });
         WebSettings settings = bodyView.getSettings();
@@ -191,19 +221,6 @@ public class ItemActivity extends Activity {
     }
 
     @Override
-    public void onResume() {
-        super.onResume();
-    }
-
-    @Override
-    public void onPause() {
-        super.onPause();
-        if (this.itemsCursor != null && !this.itemsCursor.isClosed()) {
-            this.itemsCursor.deactivate();
-        }
-    }
-
-    @Override
     public void onDestroy() {
         super.onDestroy();
         unbindService(this.serviceConn);
@@ -223,7 +240,7 @@ public class ItemActivity extends Activity {
                     rm.syncItems(subId, false);
                 } catch (IOException e) {
                     showToast(e);
-                } catch (ReaderException e) {
+                } catch (Throwable e) {
                     showToast(e);
                 }
                 handler.post(new Runnable() {
@@ -259,10 +276,7 @@ public class ItemActivity extends Activity {
                     } else {
                         rm.pinRemove(item.getUri());
                     }
-                } catch (IOException e) {
-                    // NOTE: ignore
-                    // showToast(e);
-                } catch (ReaderException e) {
+                } catch (Throwable e) {
                     // NOTE: ignore
                     // showToast(e);
                 }
@@ -540,7 +554,7 @@ public class ItemActivity extends Activity {
         showToast(getText(R.string.err_io) + " (" + e.getLocalizedMessage() + ")");
     }
 
-    private void showToast(ReaderException e) {
+    private void showToast(Throwable e) {
         e.printStackTrace();
         showToast(e.getLocalizedMessage());
     }

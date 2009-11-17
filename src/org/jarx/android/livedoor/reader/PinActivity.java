@@ -98,23 +98,8 @@ public class PinActivity extends ListActivity {
                     getText(R.string.txt_share_urls)));
             }
         });
-    }
 
-    @Override
-    public void onResume() {
-        super.onResume();
         initListAdapter();
-    }
-
-    @Override
-    public void onPause() {
-        super.onPause();
-        if (this.pinsAdapter != null) {
-            Cursor cursor = this.pinsAdapter.getCursor();
-            if (cursor != null && !cursor.isClosed()) {
-                cursor.deactivate();
-            }
-        }
     }
 
     @Override
@@ -228,8 +213,8 @@ public class PinActivity extends ListActivity {
                 }
                 handler.post(new Runnable() {
                     public void run() {
-                        dialog.dismiss();
                         PinActivity.this.finish();
+                        dialog.dismiss();
                     }
                 });
             }
