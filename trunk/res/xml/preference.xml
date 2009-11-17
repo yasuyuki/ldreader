@@ -51,6 +51,12 @@
                 android:title="@string/preference_view_unread_only_title"
                 android:summary="@string/preference_view_unread_only_summary" />
 
+        <CheckBoxPreference
+                android:key="disable_item_links"
+                android:defaultValue="false"
+                android:title="@string/preference_view_disable_item_links_title"
+                android:summary="@string/preference_view_disable_item_links_summary" />
+
     </PreferenceCategory>
 
     <PreferenceCategory

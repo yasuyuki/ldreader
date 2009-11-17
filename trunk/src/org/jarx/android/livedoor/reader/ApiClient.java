@@ -74,6 +74,7 @@ public class ApiClient {
             = new ThreadSafeClientConnManager(params, reg);
 
         this.client = new DefaultHttpClient(manager, params);
+        this.client.getParams().setParameter("http.socket.timeout", 30 * 1000);
     }
 
     public boolean login(String loginId, String password)

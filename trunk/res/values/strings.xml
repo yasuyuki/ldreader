@@ -22,6 +22,7 @@
     <string name="msg_no_item">Item not found.</string>
     <string name="msg_no_pin">Pin not found.</string>
     <string name="msg_touch_all_local">Marked all read in this feed</string>
+    <string name="msg_confirm_browse">Browse url?</string>
 
     <string name="err_io">Network error</string>
 
@@ -55,6 +56,8 @@
     <string name="preference_category_view">Display</string>
     <string name="preference_view_unread_only_title">Hide no item</string>
     <string name="preference_view_unread_only_summary">Hide no item feeds</string>
+    <string name="preference_view_disable_item_links_title">Disable links</string>
+    <string name="preference_view_disable_item_links_summary">Disable raunch browser if link clicked.</string>
 
     <string name="preference_category_info">Information</string>
     <string name="preference_info_about_title">About LDReader</string>
