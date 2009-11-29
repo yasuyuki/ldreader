@@ -90,7 +90,8 @@ public class SubscriptionActivity extends ListActivity {
         super.onResume();
         if (this.subsAdapter != null
                 && this.lastPosition < this.subsAdapter.getCount()) {
-            setSelection(this.lastPosition);
+            ListView list = getListView();
+            list.setSelectionFromTop(this.lastPosition, 48);
         }
     }
 

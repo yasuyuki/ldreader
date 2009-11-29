@@ -8,8 +8,13 @@
 
     <item android:id="@+id/menu_item_touch_all_local"
         android:orderInCategory="2"
-        android:title="Mark read all"
+        android:title="Read all"
         android:icon="@android:drawable/ic_menu_rotate" />
+
+    <item android:id="@+id/menu_item_move_to_last_read"
+        android:orderInCategory="3"
+        android:title="Move recent"
+        android:icon="@android:drawable/ic_menu_recent_history" />
 
     <item android:id="@+id/menu_item_pin"
         android:orderInCategory="7"

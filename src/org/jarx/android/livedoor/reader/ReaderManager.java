@@ -208,9 +208,9 @@ public class ReaderManager {
             while (cursor.moveToNext()) {
                 Pin pin = cursor.getPin();
                 if (pin.getAction() == Pin.ACTION_ADD) {
-                    pinAdd(pin.getUri(), pin.getTitle());
+                    pinAdd(pin.getUri(), pin.getTitle(), false);
                 } else {
-                    pinRemove(pin.getUri());
+                    pinRemove(pin.getUri(), false);
                 }
                 Uri uri = ContentUris.withAppendedId(Pin.CONTENT_URI, pin.getId());
                 cr.delete(uri, null, null);
@@ -259,7 +259,11 @@ public class ReaderManager {
     }
 
     public int countUnread() {
-        ContentResolver cr = this.context.getContentResolver();
+        return countUnread(this.context);
+    }
+
+    public static int countUnread(Context context) {
+        ContentResolver cr = context.getContentResolver();
         Cursor cursor = cr.query(Item.CONTENT_URI, null,
             Item._UNREAD + " = 1", null, null);
         try {
@@ -269,62 +273,100 @@ public class ReaderManager {
         }
     }
 
-    public boolean pinAdd(String uri, String title)
+    public boolean pinAdd(final String uri, final String title, boolean nowait)
             throws IOException, ReaderException {
-        if (!isLogined()) {
-            login();
-        }
         try {
-            ContentResolver cr = this.context.getContentResolver();
+            final ContentResolver cr = this.context.getContentResolver();
             cr.delete(Pin.CONTENT_URI, Pin._URI + " = ? and " + Pin._ACTION 
                 + " > " + Pin.ACTION_NONE, new String[]{uri});
 
-            ContentValues values = new ContentValues();
+            final ContentValues values = new ContentValues();
             values.put(Pin._URI, uri);
             values.put(Pin._TITLE, title);
             values.put(Pin._ACTION, Pin.ACTION_ADD);
             values.put(Pin._CREATED_TIME, (long) (System.currentTimeMillis() / 1000));
-            Uri pinUri = cr.insert(Pin.CONTENT_URI, values);
+            final Uri pinUri = cr.insert(Pin.CONTENT_URI, values);
 
             if (!isConnected()) {
                 return true;
             }
 
-            boolean success = this.client.pinAdd(uri, title);
-            cr.delete(Pin.CONTENT_URI, Pin._URI + " = ? and " + Pin._ACTION
-                + " = " + Pin.ACTION_NONE, new String[]{uri});
-            values.put(Pin._ACTION, Pin.ACTION_NONE);
-            cr.update(pinUri, values, null, null);
-            return success;
+            if (nowait) {
+                new Thread() {
+                    public void run() {
+                        try {
+                            runPinAdd(uri, title, cr, pinUri, values);
+                        } catch (Exception e) {
+                            // NOTE: ignore IOException, ParseException, ReaderException
+                        }
+                    }
+                }.start();
+                return true;
+            }
+
+            return runPinAdd(uri, title, cr, pinUri, values);
         } catch (ParseException e) {
             throw new ReaderException("json parse error", e);
         }
     }
 
-    public boolean pinRemove(String uri) throws IOException, ReaderException {
+    private boolean runPinAdd(String uri, String title, ContentResolver cr,
+            Uri pinUri, ContentValues values)
+            throws IOException, ParseException, ReaderException {
         if (!isLogined()) {
             login();
         }
+        boolean success = this.client.pinAdd(uri, title);
+        cr.delete(Pin.CONTENT_URI, Pin._URI + " = ? and " + Pin._ACTION
+            + " = " + Pin.ACTION_NONE, new String[]{uri});
+        values.put(Pin._ACTION, Pin.ACTION_NONE);
+        cr.update(pinUri, values, null, null);
+        return success;
+    }
+
+    public boolean pinRemove(final String uri, boolean nowait)
+            throws IOException, ReaderException {
         try {
-            ContentResolver cr = this.context.getContentResolver();
+            final ContentResolver cr = this.context.getContentResolver();
             cr.delete(Pin.CONTENT_URI, Pin._URI + " = ?", new String[]{uri});
 
-            ContentValues values = new ContentValues();
+            final ContentValues values = new ContentValues();
             values.put(Pin._URI, uri);
             values.put(Pin._ACTION, Pin.ACTION_REMOVE);
             values.put(Pin._CREATED_TIME, (long) (System.currentTimeMillis() / 1000));
-            Uri pinUri = cr.insert(Pin.CONTENT_URI, values);
+            final Uri pinUri = cr.insert(Pin.CONTENT_URI, values);
 
             if (!isConnected()) {
                 return true;
             }
 
-            boolean success = this.client.pinRemove(uri);
-            cr.delete(pinUri, null, null);
-            return success;
+            if (nowait) {
+                new Thread() {
+                    public void run() {
+                        try {
+                            runPinRemove(uri, cr, pinUri);
+                        } catch (Exception e) {
+                            // NOTE: ignore IOException, ParseException, ReaderException
+                        }
+                    }
+                }.start();
+                return true;
+            }
+
+            return runPinRemove(uri, cr, pinUri);
         } catch (ParseException e) {
             throw new ReaderException("json parse error", e);
         }
+    }
+
+    private boolean runPinRemove(String uri, ContentResolver cr, Uri pinUri)
+            throws IOException, ParseException, ReaderException {
+        if (!isLogined()) {
+            login();
+        }
+        boolean success = this.client.pinRemove(uri);
+        cr.delete(pinUri, null, null);
+        return success;
     }
 
     public boolean pinClear() throws IOException, ReaderException {
@@ -469,7 +511,7 @@ public class ReaderManager {
                 }
                 this.values.put(Item._UNREAD, (this.unread ? 1: 0));
                 this.cr.insert(Item.CONTENT_URI, this.values);
-                Log.d(TAG, "insert item " + this.values.get(Item._URI));
+                // Log.d(TAG, "insert item " + this.values.get(Item._URI));
                 this.values = null;
             }
             return true;

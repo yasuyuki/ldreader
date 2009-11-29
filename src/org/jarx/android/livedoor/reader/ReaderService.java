@@ -19,8 +19,12 @@ import android.widget.Toast;
 public class ReaderService extends Service {
 
     public static final String ACTION_SYNC_SUBS_FINISHED
-        = "ReaderService.action.syncSubsFinished";
+        = "org.jarx.android.livedoor.reader.action.SYNC_SUBS_FINISHED";
+    public static final String ACTION_UNREAD_MODIFIED
+        = "org.jarx.android.livedoor.reader.action.UNREAD_MODIFIED";
+
     private static final String TAG = "ReaderService";
+    private static final long RMAN_INTERVAL = 30 * 60 * 1000;
 
     class ReaderBinder extends Binder {
 
@@ -34,6 +38,7 @@ public class ReaderService extends Service {
     }
 
     private ReaderManager rman;
+    private long rmanExpiredTime;
     private NotificationManager nman;
     private Timer timer;
     private boolean syncRunning;
@@ -62,7 +67,6 @@ public class ReaderService extends Service {
 
     @Override
     public IBinder onBind(Intent intent) {
-        this.rman = new ReaderManager(getApplicationContext());
         return new ReaderBinder();
     }
 
@@ -86,10 +90,18 @@ public class ReaderService extends Service {
 
     public ReaderManager getSharedReaderManager() {
         ReaderManager rm = this.rman;
+        long now = System.currentTimeMillis();
         if (rm != null) {
-            return rm;
+            if (this.rmanExpiredTime > 0 && this.rmanExpiredTime < now) {
+                // NOTE: no logout
+            } else {
+                return rm;
+            }
         }
-        return new ReaderManager(getApplicationContext());
+        rm = new ReaderManager(getApplicationContext());
+        this.rman = rm;
+        this.rmanExpiredTime = System.currentTimeMillis() + RMAN_INTERVAL;
+        return rm;
     }
 
     public boolean startSync() {
@@ -98,9 +110,7 @@ public class ReaderService extends Service {
     }
 
     public synchronized boolean startSyncTimer(long delay, long interval) {
-        Log.d(TAG, "startSyncTimer(" + delay + ", " + interval + ")");
         if (this.syncRunning) {
-            Log.d(TAG, "  syncRunning");
             return false;
         }
         if (this.timer != null) {
@@ -151,18 +161,16 @@ public class ReaderService extends Service {
     }
 
     private void notifySyncStarted() {
-        Log.d(TAG, "notifySyncStarted");
         sendNotify(android.R.drawable.stat_notify_sync,
             getText(R.string.msg_sync_started));
     }
 
     private void notifySyncFinished(int syncCount) {
-        Log.d(TAG, "notifySyncFinished(" + syncCount + ")");
-
         Context context = getApplicationContext();
         ReaderManager rm = ReaderManager.newInstance(context);
         int unreadCount = rm.countUnread();
-        String msg = this.syncFinishedFormat.format(new Integer[]{syncCount, unreadCount});
+        String msg = this.syncFinishedFormat.format(
+            new Integer[]{syncCount, unreadCount});
         sendNotify(android.R.drawable.stat_notify_sync, msg);
 
         context.sendBroadcast(new Intent(ACTION_SYNC_SUBS_FINISHED));

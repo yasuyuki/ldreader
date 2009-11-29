@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
         package="org.jarx.android.livedoor.reader"
-        android:versionCode="8"
-        android:versionName="0.0.8">
+        android:versionCode="10"
+        android:versionName="0.0.10">
 
     <uses-sdk android:minSdkVersion="2" />
 
@@ -79,9 +79,25 @@
             </intent-filter>
         </receiver>
 
+<!--
+        <receiver
+                android:name=".NotifierWidget"
+                android:label="@string/app_name">
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/notifier_widget_provider" />
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="org.jarx.android.livedoor.reader.action.SYNC_SUBS_FINISHED" />
+                <action android:name="org.jarx.android.livedoor.reader.action.UNREAD_MODIFIED" />
+            </intent-filter>
+        </receiver>
+-->
+
         <service
                 android:name=".ReaderService"
                 android:enabled="true" />
+
     </application>
 
 </manifest>
