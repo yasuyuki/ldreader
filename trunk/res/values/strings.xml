@@ -58,6 +58,8 @@
     <string name="preference_view_unread_only_summary">Hide no item feeds</string>
     <string name="preference_view_disable_item_links_title">Disable links</string>
     <string name="preference_view_disable_item_links_summary">Disable raunch browser if link clicked.</string>
+    <string name="preference_view_show_item_controlls_title">Show item controlls</string>
+    <string name="preference_view_show_item_controlls_summary">Don't hide item controlls.</string>
 
     <string name="preference_category_info">Information</string>
     <string name="preference_info_about_title">About LDReader</string>

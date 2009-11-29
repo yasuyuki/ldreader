@@ -75,7 +75,7 @@
             alias="${keystore-alias}" />
     </target>
 
-    <target name="deploy" depends="sign">
+    <target name="sign-install" depends="sign">
         <exec executable="${adb}" failonerror="true">
             <arg value="-d" />
             <arg value="install" />

@@ -57,6 +57,12 @@
                 android:title="@string/preference_view_disable_item_links_title"
                 android:summary="@string/preference_view_disable_item_links_summary" />
 
+        <CheckBoxPreference
+                android:key="show_item_controlls"
+                android:defaultValue="true"
+                android:title="@string/preference_view_show_item_controlls_title"
+                android:summary="@string/preference_view_show_item_controlls_summary" />
+
     </PreferenceCategory>
 
     <PreferenceCategory

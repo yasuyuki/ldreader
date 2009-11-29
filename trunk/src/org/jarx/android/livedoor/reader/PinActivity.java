@@ -179,7 +179,7 @@ public class PinActivity extends ListActivity {
             public void run() {
                 ReaderManager rm = PinActivity.this.readerManager;
                 try {
-                    rm.pinRemove(pin.getUri());
+                    rm.pinRemove(pin.getUri(), false);
                 } catch (IOException e) {
                     showToast(e);
                 } catch (ReaderException e) {

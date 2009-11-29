@@ -58,6 +58,8 @@
     <string name="preference_view_unread_only_summary">未読が 0件の既読フィードは表示しません</string>
     <string name="preference_view_disable_item_links_title">記事中のリンクを無効</string>
     <string name="preference_view_disable_item_links_summary">記事中の URL をクリックしてもブラウザを起動しません</string>
+    <string name="preference_view_show_item_controlls_title">記事コントロール表示</string>
+    <string name="preference_view_show_item_controlls_summary">常に記事コントロールを表示します</string>
 
     <string name="preference_category_info">情報</string>
     <string name="preference_info_about_title">LDReader について</string>

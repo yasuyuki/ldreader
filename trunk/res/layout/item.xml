@@ -81,14 +81,14 @@
 
         <ImageView android:id="@+id/previous"
                 android:src="@drawable/btn_left"
-                android:layout_gravity="left|center_vertical"
+                android:layout_gravity="left|bottom"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:visibility="invisible" />
 
         <ImageView android:id="@+id/next"
                 android:src="@drawable/btn_right"
-                android:layout_gravity="right|center_vertical"
+                android:layout_gravity="right|bottom"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:visibility="invisible" />
