@@ -3,6 +3,7 @@
 
     <string name="app_name">LDReader</string>
 
+    <string name="msg_running">処理を実行中です</string>
     <string name="msg_login_running">ログインを実行中です</string>
     <string name="msg_login_success_and_sync_running">ログインに成功しました。フィードを読み込み中です</string>
     <string name="msg_login_fail">ログインに失敗しました</string>
@@ -21,7 +22,10 @@
     <string name="msg_no_item_for_title">（記事はありません）</string>
     <string name="msg_no_item">記事はありません</string>
     <string name="msg_no_pin">ピンはありません</string>
+    <string name="msg_touch_feed_local">このフィードの記事すべてを既読にしました</string>
     <string name="msg_touch_all_local">このフィードの記事すべてを既読にしました</string>
+    <string name="msg_confirm_touch_feed_local">このフィードの記事すべてを既読にしますか？</string>
+    <string name="msg_confirm_touch_all_local">すべてのフィードを既読にしますか？</string>
     <string name="msg_confirm_browse">ブラウザを起動しますか？</string>
 
     <string name="err_io">通信エラーが発生しました</string>
@@ -33,6 +37,7 @@
     <string name="txt_get_account">GET livedoor ID</string>
     <string name="txt_unreads">未読</string>
     <string name="txt_reads">既読</string>
+    <string name="txt_no_folder">（フォルダ無し）</string>
     <string name="txt_clear_all">すべて削除</string>
     <string name="txt_share_urls">URL リストを共有</string>
 
@@ -60,6 +65,7 @@
     <string name="preference_view_disable_item_links_summary">記事中の URL をクリックしてもブラウザを起動しません</string>
     <string name="preference_view_show_item_controlls_title">記事コントロール表示</string>
     <string name="preference_view_show_item_controlls_summary">常に記事コントロールを表示します</string>
+    <string name="preference_view_item_body_font_size_title">記事の文字の大きさ</string>
 
     <string name="preference_category_info">情報</string>
     <string name="preference_info_about_title">LDReader について</string>

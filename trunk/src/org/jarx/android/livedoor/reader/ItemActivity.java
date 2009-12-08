@@ -96,10 +96,10 @@ public class ItemActivity extends Activity {
         setContentView(R.layout.item);
         w.setFeatureDrawableResource(Window.FEATURE_LEFT_ICON, R.drawable.icon_s);
 
-        SubscriptionActivity.bindTitle(this);
+        SubListActivity.bindTitle(this);
 
         Intent intent = getIntent();
-        long subId = intent.getLongExtra(SubscriptionActivity.EXTRA_SUBSCRIPTION_ID, 0);
+        long subId = intent.getLongExtra(SubListActivity.EXTRA_SUBSCRIPTION_ID, 0);
 
         this.subUri = ContentUris.withAppendedId(Subscription.CONTENT_URI, subId);
         Cursor cursor = managedQuery(subUri, null, null, null, null);
@@ -114,7 +114,6 @@ public class ItemActivity extends Activity {
         bodyView.setOnTouchListener(new BodyWebViewTouchListener());
         bodyView.setWebViewClient(new BodyWebViewClient());
         WebSettings settings = bodyView.getSettings();
-        settings.setDefaultFontSize(11);
         settings.setJavaScriptEnabled(false);
         settings.setBuiltInZoomControls(false);
         settings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.SINGLE_COLUMN);
@@ -166,10 +165,10 @@ public class ItemActivity extends Activity {
         case R.id.menu_item_reload:
             progressSyncItems();
             return true;
-        case R.id.menu_item_touch_all_local:
+        case R.id.menu_item_touch_feed_local:
             destroyItems(true);
             initItems();
-            showToast(getText(R.string.msg_touch_all_local));
+            showToast(getText(R.string.msg_touch_feed_local));
             return true;
         case R.id.menu_item_move_to_last_read:
             initItems(true);
@@ -185,6 +184,15 @@ public class ItemActivity extends Activity {
             return true;
         }
         return false;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        final WebView bodyView = (WebView) findViewById(R.id.item_body);
+        WebSettings settings = bodyView.getSettings();
+        settings.setDefaultFontSize(ReaderPreferences.getItemBodyFontSize(
+            getApplicationContext()));
     }
 
     @Override
@@ -551,6 +559,9 @@ public class ItemActivity extends Activity {
 
     private String createBodyHtml(Item item) {
         String body = item.getBody();
+        if (body == null) {
+            body = "";
+        }
         long time = item.getCreatedOrModifiedTime();
         String author = item.getAuthor();
         StringBuilder buff = new StringBuilder(body.length() + 256);
@@ -572,7 +583,7 @@ public class ItemActivity extends Activity {
             }
         }
         buff.append("</div>");
-        buff.append("<div class=\"item_body\" style=\"margin:8px 0 40px 0; word-wrap:break-word; overflow:auto;\">");
+        buff.append("<div class=\"item_body\" style=\"margin:8px 0 50px 0; word-wrap:break-word; overflow:auto;\">");
         buff.append(body);
         buff.append("</div>");
         return new String(buff);

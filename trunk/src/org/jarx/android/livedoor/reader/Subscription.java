@@ -16,10 +16,12 @@ public final class Subscription implements Serializable, BaseColumns {
 
     public static final String TABLE_NAME = "subscription";
 
-    public static final String CONTENT_URI_NAME
-        = "content://" + ReaderProvider.AUTHORITY + "/" + TABLE_NAME;
-
-    public static final Uri CONTENT_URI = Uri.parse(CONTENT_URI_NAME);
+    public static final Uri CONTENT_URI
+        = Uri.parse(ReaderProvider.SUB_CONTENT_URI_NAME);
+    public static final Uri FOLDER_CONTENT_URI
+        = Uri.parse(ReaderProvider.SUB_FOLDER_CONTENT_URI_NAME);
+    public static final Uri RATE_CONTENT_URI
+        = Uri.parse(ReaderProvider.SUB_RATE_CONTENT_URI_NAME);
 
     public static final String _URI = "uri";
     public static final String _TITLE = "title";
@@ -34,6 +36,9 @@ public final class Subscription implements Serializable, BaseColumns {
     // NOTE database version 5 or later
     public static final String _DISABLED = "disabled";
     public static final String _READ_ITEM_ID = "read_item_id";
+
+    public static final int GROUP_FOLDER = 1;
+    public static final int GROUP_RATE = 2;
 
     public static final String SQL_CREATE_TABLE
         = "create table if not exists " + TABLE_NAME + " ("

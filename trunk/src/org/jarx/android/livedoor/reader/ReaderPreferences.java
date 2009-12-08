@@ -6,16 +6,17 @@ import android.preference.PreferenceManager;
 
 public class ReaderPreferences {
 
-    public static final String PREFS_KEY_LOGIN_ID = "login_id";
-    public static final String PREFS_KEY_PASSWORD = "password";
-    public static final String PREFS_KEY_SUBS_VIEW = "subs_view";
-    public static final String PREFS_KEY_SUBS_SORT = "subs_sort";
-    public static final String PREFS_KEY_SYNC_INTERVAL_HOURS = "sync_interval_hours";
-    public static final String PREFS_KEY_SYNC_UNREAD_ONLY = "sync_unread_only";
-    public static final String PREFS_KEY_AUTO_TOUCH_ALL = "auto_touch_all";
-    public static final String PREFS_KEY_VIEW_UNREAD_ONLY = "view_unread_only";
-    public static final String PREFS_KEY_DISABLE_ITEM_LINKS = "disable_item_links";
-    public static final String PREFS_KEY_SHOW_ITEM_CONTROLLS = "show_item_controlls";
+    public static final String KEY_LOGIN_ID = "login_id";
+    public static final String KEY_PASSWORD = "password";
+    public static final String KEY_SUBS_VIEW = "subs_view";
+    public static final String KEY_SUBS_SORT = "subs_sort";
+    public static final String KEY_SYNC_INTERVAL_HOURS = "sync_interval_hours";
+    public static final String KEY_SYNC_UNREAD_ONLY = "sync_unread_only";
+    public static final String KEY_AUTO_TOUCH_ALL = "auto_touch_all";
+    public static final String KEY_VIEW_UNREAD_ONLY = "view_unread_only";
+    public static final String KEY_DISABLE_ITEM_LINKS = "disable_item_links";
+    public static final String KEY_SHOW_ITEM_CONTROLLS = "show_item_controlls";
+    public static final String KEY_ITEM_BODY_FONT_SIZE = "item_body_font_size";
 
     public static final int SUBS_VIEW_FLAT = 1;
     public static final int SUBS_VIEW_FOLDER = 2;
@@ -40,7 +41,11 @@ public class ReaderPreferences {
     }
 
     public static int getInt(Context c, String name, int def) {
-        return getPreferences(c).getInt(name, def);
+        try {
+            return getPreferences(c).getInt(name, def);
+        } catch (Exception e) {
+            return def;
+        }
     }
 
     public static long getLong(Context c, String name, long def) {
@@ -52,36 +57,47 @@ public class ReaderPreferences {
     }
 
     public static String getLoginId(Context c) {
-        return getString(c, PREFS_KEY_LOGIN_ID);
+        return getString(c, KEY_LOGIN_ID);
     }
 
     public static String getPassword(Context c) {
-        return getString(c, PREFS_KEY_PASSWORD);
+        return getString(c, KEY_PASSWORD);
     }
 
     public static void setLoginIdPassword(Context c, String loginId,
             String password) {
         SharedPreferences sp = getPreferences(c);
         SharedPreferences.Editor editor = sp.edit();
-        editor.putString(PREFS_KEY_LOGIN_ID, loginId);
-        editor.putString(PREFS_KEY_PASSWORD, password);
+        editor.putString(KEY_LOGIN_ID, loginId);
+        editor.putString(KEY_PASSWORD, password);
+        editor.commit();
+    }
+
+    public static int getSubsView(Context c) {
+        return getInt(c, KEY_SUBS_VIEW, SUBS_VIEW_FLAT);
+    }
+
+    public static void setSubsView(Context c, int subsView) {
+        SharedPreferences sp = getPreferences(c);
+        SharedPreferences.Editor editor = sp.edit();
+        editor.putInt(KEY_SUBS_VIEW, subsView);
         editor.commit();
     }
 
     public static int getSubsSort(Context c) {
-        return getInt(c, PREFS_KEY_SUBS_SORT, SUBS_SORT_MODIFIED_DESC);
+        return getInt(c, KEY_SUBS_SORT, SUBS_SORT_MODIFIED_DESC);
     }
 
     public static void setSubsSort(Context c, int subsSort) {
         SharedPreferences sp = getPreferences(c);
         SharedPreferences.Editor editor = sp.edit();
-        editor.putInt(PREFS_KEY_SUBS_SORT, subsSort);
+        editor.putInt(KEY_SUBS_SORT, subsSort);
         editor.commit();
     }
 
     public static long getSyncInterval(Context c) {
-        String h = getString(c, PREFS_KEY_SYNC_INTERVAL_HOURS);
-        int hour = 3;
+        String h = getString(c, KEY_SYNC_INTERVAL_HOURS);
+        int hour = 2;
         if (h != null && h.length() != 0) {
             hour = Integer.parseInt(h);
         }
@@ -89,22 +105,31 @@ public class ReaderPreferences {
     }
 
     public static boolean isSyncUnreadOnly(Context c) {
-        return getBoolean(c, PREFS_KEY_SYNC_UNREAD_ONLY, true);
+        return getBoolean(c, KEY_SYNC_UNREAD_ONLY, true);
     }
 
     public static boolean isAutoTouchAll(Context c) {
-        return getBoolean(c, PREFS_KEY_AUTO_TOUCH_ALL, false);
+        return getBoolean(c, KEY_AUTO_TOUCH_ALL, false);
     }
 
     public static boolean isViewUnreadOnly(Context c) {
-        return getBoolean(c, PREFS_KEY_VIEW_UNREAD_ONLY, false);
+        return getBoolean(c, KEY_VIEW_UNREAD_ONLY, false);
     }
 
     public static boolean isDisableItemLinks(Context c) {
-        return getBoolean(c, PREFS_KEY_DISABLE_ITEM_LINKS, false);
+        return getBoolean(c, KEY_DISABLE_ITEM_LINKS, false);
     }
 
     public static boolean isShowItemControlls(Context c) {
-        return getBoolean(c, PREFS_KEY_SHOW_ITEM_CONTROLLS, true);
+        return getBoolean(c, KEY_SHOW_ITEM_CONTROLLS, true);
+    }
+
+    public static int getItemBodyFontSize(Context c) {
+        String fontSize = getString(c, KEY_ITEM_BODY_FONT_SIZE);
+        if (fontSize != null && fontSize.length() != 0) {
+            return Integer.parseInt(fontSize);
+        } else {
+            return 13;
+        }
     }
 }

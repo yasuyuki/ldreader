@@ -25,7 +25,7 @@
                 android:summary="@string/preference_sync_interval_summary"
                 android:entries="@array/sync_interval_hours_labels"
                 android:entryValues="@array/sync_interval_hours_values"
-                android:defaultValue="3"
+                android:defaultValue="2"
                 android:dialogTitle="@string/preference_sync_interval_title" />
 
         <CheckBoxPreference
@@ -44,6 +44,14 @@
 
     <PreferenceCategory
             android:title="@string/preference_category_view">
+
+        <ListPreference
+                android:key="item_body_font_size"
+                android:title="@string/preference_view_item_body_font_size_title"
+                android:entries="@array/item_body_font_size_labels"
+                android:entryValues="@array/item_body_font_size_values"
+                android:defaultValue="13"
+                android:dialogTitle="@string/preference_view_item_body_font_size_title" />
 
         <CheckBoxPreference
                 android:key="view_unread_only"

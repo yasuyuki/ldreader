@@ -21,30 +21,53 @@ public class ReaderProvider extends ContentProvider {
 
     public static final String AUTHORITY = "org.jarx.android.livedoor.reader";
 
+    public static final String SUB_CONTENT_URI_NAME
+        = "content://" + AUTHORITY + "/" + Subscription.TABLE_NAME;
+    public static final String SUB_FOLDER_CONTENT_URI_NAME
+        = SUB_CONTENT_URI_NAME + "/folder";
+    public static final String SUB_RATE_CONTENT_URI_NAME
+        = SUB_CONTENT_URI_NAME + "/rate";
+    public static final String ITEM_CONTENT_URI_NAME
+        = "content://" + AUTHORITY + "/" + Item.TABLE_NAME;
+    public static final String PIN_CONTENT_URI_NAME
+        = "content://" + AUTHORITY + "/" + Pin.TABLE_NAME;
+
     private static final String DATABASE_NAME = "reader.db";
     private static final int DATABASE_VERSION = 5;
-
-    private static final UriMatcher uriMatcher;
-    private static final int URI_SUBSCRIPTION_ID = 10;
-    private static final int URI_SUBSCRIPTIONS = 11;
-    private static final int URI_ITEM_ID = 20;
-    private static final int URI_ITEMS = 21;
-    private static final int URI_PIN_ID = 30;
-    private static final int URI_PINS = 31;
 
     private static final String CONTENT_TYPE_ITEM
         = "vnd.android.cursor.item/vnd." + AUTHORITY;
     private static final String CONTENT_TYPE_DIR
         = "vnd.android.cursor.dir/vnd." + AUTHORITY;
 
+    private static final UriMatcher uriMatcher;
+    private static final int UM_SUB_ID = 10;
+    private static final int UM_SUBS = 11;
+    private static final int UM_SUBS_FOLDER = 12;
+    private static final int UM_SUBS_RATE = 13;
+    private static final int UM_ITEM_ID = 20;
+    private static final int UM_ITEMS = 21;
+    private static final int UM_PIN_ID = 30;
+    private static final int UM_PINS = 31;
+
     static {
         uriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
-        uriMatcher.addURI(AUTHORITY, Subscription.TABLE_NAME + "/#", URI_SUBSCRIPTION_ID);
-        uriMatcher.addURI(AUTHORITY, Subscription.TABLE_NAME, URI_SUBSCRIPTIONS);
-        uriMatcher.addURI(AUTHORITY, Item.TABLE_NAME + "/#", URI_ITEM_ID);
-        uriMatcher.addURI(AUTHORITY, Item.TABLE_NAME, URI_ITEMS);
-        uriMatcher.addURI(AUTHORITY, Pin.TABLE_NAME + "/#", URI_PIN_ID);
-        uriMatcher.addURI(AUTHORITY, Pin.TABLE_NAME, URI_PINS);
+        uriMatcher.addURI(AUTHORITY,
+            Subscription.TABLE_NAME + "/#", UM_SUB_ID);
+        uriMatcher.addURI(AUTHORITY,
+            Subscription.TABLE_NAME, UM_SUBS);
+        uriMatcher.addURI(AUTHORITY,
+            Subscription.TABLE_NAME + "/folder", UM_SUBS_FOLDER);
+        uriMatcher.addURI(AUTHORITY,
+            Subscription.TABLE_NAME + "/rate", UM_SUBS_RATE);
+        uriMatcher.addURI(AUTHORITY,
+            Item.TABLE_NAME + "/#", UM_ITEM_ID);
+        uriMatcher.addURI(AUTHORITY,
+            Item.TABLE_NAME, UM_ITEMS);
+        uriMatcher.addURI(AUTHORITY,
+            Pin.TABLE_NAME + "/#", UM_PIN_ID);
+        uriMatcher.addURI(AUTHORITY,
+            Pin.TABLE_NAME, UM_PINS);
     }
 
     static String sqlCreateIndex(String tableName, String columnName) {
@@ -120,13 +143,15 @@ public class ReaderProvider extends ContentProvider {
     @Override
     public String getType(Uri uri) {
         switch (uriMatcher.match(uri)) {
-        case URI_SUBSCRIPTION_ID:
-        case URI_ITEM_ID:
-        case URI_PIN_ID:
+        case UM_SUB_ID:
+        case UM_ITEM_ID:
+        case UM_PIN_ID:
             return CONTENT_TYPE_ITEM;
-        case URI_SUBSCRIPTIONS:
-        case URI_ITEMS:
-        case URI_PINS:
+        case UM_SUBS:
+        case UM_SUBS_FOLDER:
+        case UM_SUBS_RATE:
+        case UM_ITEMS:
+        case UM_PINS:
             return CONTENT_TYPE_DIR;
         default:
             throw new IllegalArgumentException("Unknown URI " + uri);
@@ -138,26 +163,55 @@ public class ReaderProvider extends ContentProvider {
             String[] selectionArgs, String sortOrder) {
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
 
+        String groupBy = null;
+        String having = null;
         switch (uriMatcher.match(uri)) {
-        case URI_SUBSCRIPTION_ID:
+        case UM_SUB_ID:
             qb.setTables(Subscription.TABLE_NAME);
-            qb.appendWhere(Subscription._ID + " = " + uri.getPathSegments().get(1));
+            qb.appendWhere(Subscription._ID + " = "
+                + uri.getPathSegments().get(1));
             break;
-        case URI_SUBSCRIPTIONS:
+        case UM_SUBS:
             qb.setTables(Subscription.TABLE_NAME);
             break;
-        case URI_ITEM_ID:
-            qb.setTables(Item.TABLE_NAME);
-            qb.appendWhere(Item._ID + " = " + uri.getPathSegments().get(1));
+        case UM_SUBS_FOLDER:
+            qb.setTables(Subscription.TABLE_NAME);
+            if (projection == null) {
+                projection = new String[]{
+                    "max(" + Subscription._ID + ") " + Subscription._ID,
+                    Integer.toString(Subscription.GROUP_FOLDER),
+                    "count(*)",
+                    Subscription._FOLDER
+                };
+            }
+            groupBy = Subscription._FOLDER;
             break;
-        case URI_ITEMS:
+        case UM_SUBS_RATE:
+            qb.setTables(Subscription.TABLE_NAME);
+            if (projection == null) {
+                projection = new String[]{
+                    "max(" + Subscription._ID + ") " + Subscription._ID,
+                    Integer.toString(Subscription.GROUP_RATE),
+                    "count(*)",
+                    Subscription._RATE
+                };
+            }
+            groupBy = Subscription._RATE;
+            break;
+        case UM_ITEM_ID:
+            qb.setTables(Item.TABLE_NAME);
+            qb.appendWhere(Item._ID + " = "
+                + uri.getPathSegments().get(1));
+            break;
+        case UM_ITEMS:
             qb.setTables(Item.TABLE_NAME);
             break;
-        case URI_PIN_ID:
+        case UM_PIN_ID:
             qb.setTables(Pin.TABLE_NAME);
-            qb.appendWhere(Pin._ID + " = " + uri.getPathSegments().get(1));
+            qb.appendWhere(Pin._ID + " = "
+                + uri.getPathSegments().get(1));
             break;
-        case URI_PINS:
+        case UM_PINS:
             qb.setTables(Pin.TABLE_NAME);
             break;
         default:
@@ -165,7 +219,8 @@ public class ReaderProvider extends ContentProvider {
         }
 
         SQLiteDatabase db = this.openHelper.getReadableDatabase();
-        Cursor c = qb.query(db, projection, selection, selectionArgs, null, null, sortOrder);
+        Cursor c = qb.query(db, projection, selection, selectionArgs,
+            groupBy, having, sortOrder);
         c.setNotificationUri(getContext().getContentResolver(), uri);
         return c;
     }
@@ -175,15 +230,15 @@ public class ReaderProvider extends ContentProvider {
         String tableName;
         Uri contentUri;
         switch (uriMatcher.match(uri)) {
-        case URI_SUBSCRIPTIONS:
+        case UM_SUBS:
             tableName = Subscription.TABLE_NAME;
             contentUri = Subscription.CONTENT_URI;
             break;
-        case URI_ITEMS:
+        case UM_ITEMS:
             tableName = Item.TABLE_NAME;
             contentUri = Item.CONTENT_URI;
             break;
-        case URI_PINS:
+        case UM_PINS:
             tableName = Pin.TABLE_NAME;
             contentUri = Pin.CONTENT_URI;
             break;
@@ -208,34 +263,35 @@ public class ReaderProvider extends ContentProvider {
     }
 
     @Override
-    public int update(Uri uri, ContentValues values, String where, String[] whereArgs) {
+    public int update(Uri uri, ContentValues values, String where,
+            String[] whereArgs) {
         return update(uri, values, where, whereArgs, true);
     }
 
-    private int update(Uri uri, ContentValues values, String where, String[] whereArgs,
-            boolean update) {
+    private int update(Uri uri, ContentValues values, String where,
+            String[] whereArgs, boolean update) {
         SQLiteDatabase db = this.openHelper.getWritableDatabase();
         String tableName;
         switch (uriMatcher.match(uri)) {
-        case URI_SUBSCRIPTION_ID:
+        case UM_SUB_ID:
             tableName = Subscription.TABLE_NAME;
             where = sqlIdWhere(uri.getPathSegments().get(1), where);
             break;
-        case URI_SUBSCRIPTIONS:
+        case UM_SUBS:
             tableName = Subscription.TABLE_NAME;
             break;
-        case URI_ITEM_ID:
+        case UM_ITEM_ID:
             tableName = Item.TABLE_NAME;
             where = sqlIdWhere(uri.getPathSegments().get(1), where);
             break;
-        case URI_ITEMS:
+        case UM_ITEMS:
             tableName = Item.TABLE_NAME;
             break;
-        case URI_PIN_ID:
+        case UM_PIN_ID:
             tableName = Pin.TABLE_NAME;
             where = sqlIdWhere(uri.getPathSegments().get(1), where);
             break;
-        case URI_PINS:
+        case UM_PINS:
             tableName = Pin.TABLE_NAME;
             break;
         default:
