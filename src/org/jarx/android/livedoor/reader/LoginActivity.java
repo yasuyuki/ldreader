@@ -113,7 +113,7 @@ public class LoginActivity extends Activity {
     }
 
     private void startSubscription() {
-        startActivity(new Intent(this, SubscriptionActivity.class));
+        SubListActivityHelper.startSubListActivity(this);
         finish();
     }
 

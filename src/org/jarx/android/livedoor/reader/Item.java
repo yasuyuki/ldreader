@@ -11,10 +11,8 @@ public class Item implements Serializable, BaseColumns {
 
     public static final String TABLE_NAME = "item";
 
-    public static final String CONTENT_URI_NAME
-        = "content://" + ReaderProvider.AUTHORITY + "/" + TABLE_NAME;
-
-    public static final Uri CONTENT_URI = Uri.parse(CONTENT_URI_NAME);
+    public static final Uri CONTENT_URI
+        = Uri.parse(ReaderProvider.ITEM_CONTENT_URI_NAME);
 
     public static final String _SUBSCRIPTION_ID = "subscription_id";
     public static final String _URI = "uri";

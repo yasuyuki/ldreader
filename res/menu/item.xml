@@ -6,9 +6,9 @@
         android:title="Reload"
         android:icon="@drawable/ic_menu_refresh" />
 
-    <item android:id="@+id/menu_item_touch_all_local"
+    <item android:id="@+id/menu_item_touch_feed_local"
         android:orderInCategory="2"
-        android:title="Read all"
+        android:title="Read this feed"
         android:icon="@android:drawable/ic_menu_rotate" />
 
     <item android:id="@+id/menu_item_move_to_last_read"

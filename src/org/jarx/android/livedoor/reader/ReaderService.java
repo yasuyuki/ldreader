@@ -191,9 +191,11 @@ public class ReaderService extends Service {
         CharSequence title = getText(R.string.app_name);
         Notification notification = new Notification(
             icon, message, System.currentTimeMillis());
-        PendingIntent intent = PendingIntent.getActivity(this, 0,
-                new Intent(this, SubscriptionActivity.class), 0);
-        notification.setLatestEventInfo(this, title, message, intent);
-        this.nman.notify(R.layout.subscription, notification);
+        Intent intent = new Intent(this, LoginActivity.class);
+        intent.setAction(Intent.ACTION_MAIN);
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+                this, 0, intent, 0);
+        notification.setLatestEventInfo(this, title, message, pendingIntent);
+        this.nman.notify(R.layout.sub_list, notification);
     }
 }

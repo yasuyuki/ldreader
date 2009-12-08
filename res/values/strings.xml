@@ -3,6 +3,7 @@
 
     <string name="app_name">LDReader</string>
 
+    <string name="msg_running">Processing..</string>
     <string name="msg_login_running">Login..</string>
     <string name="msg_login_success_and_sync_running">Login success. synchronization running.</string>
     <string name="msg_login_fail">Login failure</string>
@@ -21,7 +22,10 @@
     <string name="msg_no_item_for_title">(Item not found)</string>
     <string name="msg_no_item">Item not found.</string>
     <string name="msg_no_pin">Pin not found.</string>
-    <string name="msg_touch_all_local">Marked all read in this feed</string>
+    <string name="msg_touch_feed_local">Marked all as read in this feed.</string>
+    <string name="msg_touch_all_local">Marked all as read.</string>
+    <string name="msg_confirm_touch_feed_local">Do you mark all as read in this feed?</string>
+    <string name="msg_confirm_touch_all_local">Do you mark all as read?</string>
     <string name="msg_confirm_browse">Browse url?</string>
 
     <string name="err_io">Network error</string>
@@ -33,6 +37,7 @@
     <string name="txt_get_account">GET livedoor ID</string>
     <string name="txt_unreads">Unreads</string>
     <string name="txt_reads">Reads</string>
+    <string name="txt_no_folder">（No folder）</string>
     <string name="txt_clear_all">Clear all</string>
     <string name="txt_share_urls">Share URLs</string>
 
@@ -60,6 +65,7 @@
     <string name="preference_view_disable_item_links_summary">Disable raunch browser if link clicked.</string>
     <string name="preference_view_show_item_controlls_title">Show item controlls</string>
     <string name="preference_view_show_item_controlls_summary">Don't hide item controlls.</string>
+    <string name="preference_view_item_body_font_size_title">Item view font size</string>
 
     <string name="preference_category_info">Information</string>
     <string name="preference_info_about_title">About LDReader</string>

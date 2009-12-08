@@ -2,7 +2,6 @@ package org.jarx.android.livedoor.reader;
 
 import java.io.IOException;
 import android.app.Activity; 
-import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ListActivity;
 import android.app.ProgressDialog;
@@ -19,27 +18,22 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 import android.view.Menu;
-import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.View.OnClickListener;
 import android.view.Window;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.RatingBar;
 import android.widget.ResourceCursorAdapter;
 import android.widget.TextView;
-import android.widget.Toast;
 
-public class SubscriptionActivity extends ListActivity {
+public class SubListActivity extends ListActivity
+        implements SubListActivityHelper.SubListable {
 
     public static final String EXTRA_SUBSCRIPTION_ID = "subscriptionId";
 
-    private static final String TAG = "SubscriptionActivity";
-    private static final int REQUEST_PREFERENCES = 1;
-    private static final int DIALOG_SUBS_VIEW = 1;
-    private static final int DIALOG_SUBS_SORT = 2;
+    private static final String TAG = "SubListActivity";
 
     private final Handler handler = new Handler();
     private SubsAdapter subsAdapter;
@@ -50,18 +44,18 @@ public class SubscriptionActivity extends ListActivity {
         @Override
         public void onServiceConnected(ComponentName className, IBinder service) {
             ReaderService.ReaderBinder binder = (ReaderService.ReaderBinder) service;
-            SubscriptionActivity.this.readerService = binder.getService();
+            SubListActivity.this.readerService = binder.getService();
         }
         @Override
         public void onServiceDisconnected(ComponentName className) {
-            SubscriptionActivity.this.readerService = null;
+            SubListActivity.this.readerService = null;
         }
     };
 
     private BroadcastReceiver refreshReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            SubscriptionActivity.this.initListAdapter();
+            SubListActivity.this.initListAdapter();
         }
     };
 
@@ -72,12 +66,11 @@ public class SubscriptionActivity extends ListActivity {
 
         Window w = getWindow();
         w.requestFeature(Window.FEATURE_LEFT_ICON);
-        setContentView(R.layout.subscription);
+        setContentView(R.layout.sub_list);
         w.setFeatureDrawableResource(Window.FEATURE_LEFT_ICON, R.drawable.icon_s);
 
         bindService(new Intent(this, ReaderService.class),
             this.serviceConn, Context.BIND_AUTO_CREATE);
-
         registerReceiver(this.refreshReceiver,
             new IntentFilter(ReaderService.ACTION_SYNC_SUBS_FINISHED));
 
@@ -112,52 +105,37 @@ public class SubscriptionActivity extends ListActivity {
 
     @Override
     protected Dialog onCreateDialog(int id) {
-        final Context context = getApplicationContext();
-        switch (id) {
-        case DIALOG_SUBS_SORT:
-            int defaultWhich = ReaderPreferences.getSubsSort(context) - 1;
-            return new AlertDialog.Builder(this)
-                .setIcon(R.drawable.alert_dialog_icon)
-                .setTitle(R.string.dialog_subs_sort_title)
-                .setSingleChoiceItems(R.array.dialog_subs_sort_items, defaultWhich,
-                    new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialog, int which) {
-                            ReaderPreferences.setSubsSort(context, which + 1);
-                            SubscriptionActivity.this.initListAdapter();
-                            dialog.dismiss();
-                        }
-                    }
-                ).create();
-        }
-        return null;
+        return SubListActivityHelper.onCreateDialog(this, id);
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.subscription, menu);
-        return true;
+        return SubListActivityHelper.onCreateOptionsMenu(this, menu);
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-        case R.id.menu_item_reload:
-            startSync();
-            initListAdapter();
-            return true;
-        case R.id.menu_item_subs_sort:
-            showDialog(DIALOG_SUBS_SORT);
-            return true;
-        case R.id.menu_item_pin:
-            startActivity(new Intent(this, PinActivity.class));
-            return true;
-        case R.id.menu_item_setting:
-            startActivityForResult(new Intent(this, ReaderPreferenceActivity.class),
-                REQUEST_PREFERENCES);
-            return true;
-        }
-        return false;
+        return SubListActivityHelper.onOptionsItemSelected(this, item);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        SubListActivityHelper.onActivityResult(this, requestCode, resultCode, data);
+    }
+
+    @Override
+    public Activity getActivity() {
+        return this;
+    }
+
+    @Override
+    public ReaderService getReaderService() {
+        return this.readerService;
+    }
+
+    @Override
+    public Handler getHandler() {
+        return this.handler;
     }
 
     @Override
@@ -171,15 +149,7 @@ public class SubscriptionActivity extends ListActivity {
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        switch (requestCode) {
-        case REQUEST_PREFERENCES:
-            initListAdapter();
-            break;
-        }
-    }
-
-    private synchronized void initListAdapter() {
+    public synchronized void initListAdapter() {
         this.lastPosition = 0;
 
         Context context = getApplicationContext();
@@ -216,14 +186,6 @@ public class SubscriptionActivity extends ListActivity {
         }
     }
 
-    private void startSync() {
-        if (this.readerService.startSync()) {
-            showToast(getString(R.string.msg_sync_started));
-        } else {
-            showToast(getString(R.string.msg_sync_running));
-        }
-    }
-
     static void bindTitle(Activity a) {
         String loginId = ReaderPreferences.getLoginId(a.getApplicationContext());
         if (loginId != null) {
@@ -235,28 +197,10 @@ public class SubscriptionActivity extends ListActivity {
         }
     }
 
-    private void showToast(IOException e) {
-        e.printStackTrace();
-        showToast(getText(R.string.err_io) + " (" + e.getLocalizedMessage() + ")");
-    }
-
-    private void showToast(ReaderException e) {
-        e.printStackTrace();
-        showToast(e.getLocalizedMessage());
-    }
-
-    private void showToast(final CharSequence text) {
-        this.handler.post(new Runnable() {
-            public void run() {
-                Toast.makeText(getApplicationContext(), text, Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
     private class SubsAdapter extends ResourceCursorAdapter {
 
         private SubsAdapter(Context context, Cursor cursor) {
-            super(context, R.layout.subscription_row,
+            super(context, R.layout.sub_list_row,
                 new Subscription.FilterCursor(cursor));
         }
 
@@ -302,7 +246,7 @@ public class SubscriptionActivity extends ListActivity {
         @Override
         protected void onContentChanged() {
             super.onContentChanged();
-            SubscriptionActivity.this.bindMessageView();
+            SubListActivity.this.bindMessageView();
         }
     }
 }

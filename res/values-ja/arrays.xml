@@ -5,7 +5,6 @@
         <item>フラット</item>
         <item>フォルダ</item>
         <item>レート</item>
-        <item>購読者数</item>
     </string-array>
 
     <string-array name="dialog_subs_sort_items">
@@ -29,19 +28,17 @@
         <item>定期的に取り込まない</item>
         <item>1時間毎</item>
         <item>2時間毎</item>
-        <item>3時間毎</item>
-        <item>6時間毎</item>
+        <item>4時間毎</item>
         <item>12時間毎</item>
         <item>1日毎</item>
     </string-array>
-    <string-array name="sync_interval_hours_values">
-        <item>0</item>
-        <item>1</item>
-        <item>2</item>
-        <item>3</item>
-        <item>6</item>
-        <item>12</item>
-        <item>24</item>
+
+    <string-array name="item_body_font_size_labels">
+        <item>最小</item>
+        <item>小</item>
+        <item>中</item>
+        <item>大</item>
+        <item>最大</item>
     </string-array>
 
 </resources>
