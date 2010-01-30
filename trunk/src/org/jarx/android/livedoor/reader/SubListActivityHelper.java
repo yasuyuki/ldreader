@@ -124,7 +124,7 @@ public class SubListActivityHelper extends ActivityHelper {
 
     static boolean onCreateOptionsMenu(SubListable listable, Menu menu) {
         MenuInflater inflater = listable.getActivity().getMenuInflater();
-        inflater.inflate(R.menu.subscription, menu);
+        inflater.inflate(R.menu.sub_list, menu);
         return true;
     }
 

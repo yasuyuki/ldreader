@@ -53,18 +53,35 @@ public class Utils {
         }
     }
 
+    public static String stripWhitespaces(String value) {
+        if (value == null || value.length() == 0) {
+            return value;
+        }
+        return value.replaceAll("[\\s\u3000]+", " ").trim();
+    }
+
     public static String htmlAsPlainText(String value) {
-        if (value == null) {
+        if (value == null || value.length() == 0) {
             return value;
         }
         value = value.replaceAll("\\s+", " ");
-        value = value.replaceAll("[\r\n]", "");
-        value = value.replaceAll("<br\\s?/>", "\n");
-        return value.replaceAll("<.*?>", "");
+        value = value.replaceAll("<br\\s?/?>", "\n");
+        value = value.replaceAll("<.*?>", " ");
+
+        // NOTE: some html entities
+        value = value.replaceAll("&lt;", "<");
+        value = value.replaceAll("&gt;", ">");
+        value = value.replaceAll("&quot;", "\"");
+        value = value.replaceAll("&apos;", "\'");
+        value = value.replaceAll("&nbsp;", " ");
+        value = value.replaceAll("&amp;", "&");
+
+        value = value.replaceAll("  +", " ");
+        return value;
     }
 
     public static String htmlEscape(String value) {
-        if (value == null) {
+        if (value == null || value.length() == 0) {
             return value;
         }
         value = value.replaceAll("&", "&amp;");

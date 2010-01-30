@@ -22,6 +22,7 @@
     <string name="msg_no_item_for_title">(Item not found)</string>
     <string name="msg_no_item">Item not found.</string>
     <string name="msg_no_pin">Pin not found.</string>
+    <string name="msg_touch_running">Mark as read running.</string>
     <string name="msg_touch_feed_local">Marked all as read in this feed.</string>
     <string name="msg_touch_all_local">Marked all as read.</string>
     <string name="msg_confirm_touch_feed_local">Do you mark all as read in this feed?</string>
@@ -46,6 +47,7 @@
 
     <string name="dialog_subs_view_title">Select View Type</string>
     <string name="dialog_subs_sort_title">Select Sort Type</string>
+    <string name="dialog_item_list_move_title">Move to</string>
 
     <string name="preference_category_account">Account</string>
     <string name="preference_login_title">Login settings</string>

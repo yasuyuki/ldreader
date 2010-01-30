@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!--
     <item android:id="@+id/menu_item_reload"
         android:orderInCategory="1"
         android:title="Reload"
@@ -9,24 +8,23 @@
 
     <item android:id="@+id/menu_item_touch_feed_local"
         android:orderInCategory="2"
-        android:title="Read this feed"
+        android:title="Mark as read"
         android:icon="@android:drawable/ic_menu_rotate" />
 
-    <item android:id="@+id/menu_item_move_to_last_read"
+    <item android:id="@+id/menu_item_move"
         android:orderInCategory="3"
-        android:title="Move recent"
+        android:title="Move"
         android:icon="@android:drawable/ic_menu_recent_history" />
-    -->
 
-    <item android:id="@+id/menu_item_pin"
-        android:orderInCategory="7"
-        android:title="Pin"
-        android:icon="@drawable/ic_menu_mark" />
+    <item android:id="@+id/menu_unreads"
+        android:orderInCategory="4"
+        android:title="Hide unread"
+        android:icon="@android:drawable/ic_menu_view" />
 
-    <item android:id="@+id/menu_item_pin_list"
-        android:orderInCategory="8"
-        android:title="Pin list"
-        android:icon="@drawable/ic_menu_agenda" />
+    <item android:id="@+id/menu_search"
+        android:orderInCategory="5"
+        android:title="Search"
+        android:icon="@android:drawable/ic_menu_search" />
 
     <item android:id="@+id/menu_item_setting"
         android:orderInCategory="9"

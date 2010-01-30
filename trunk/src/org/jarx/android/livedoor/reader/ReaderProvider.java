@@ -32,8 +32,9 @@ public class ReaderProvider extends ContentProvider {
     public static final String PIN_CONTENT_URI_NAME
         = "content://" + AUTHORITY + "/" + Pin.TABLE_NAME;
 
+    private static final String TAG = "ReaderProvider";
     private static final String DATABASE_NAME = "reader.db";
-    private static final int DATABASE_VERSION = 5;
+    private static final int DATABASE_VERSION = 6;
 
     private static final String CONTENT_TYPE_ITEM
         = "vnd.android.cursor.item/vnd." + AUTHORITY;
@@ -80,6 +81,24 @@ public class ReaderProvider extends ContentProvider {
         buff.append(tableName);
         buff.append("(");
         buff.append(columnName);
+        buff.append(")");
+        return new String(buff);
+    }
+
+    static String sqlCreateIndex(String tableName, String indexName,
+            String ... columnNames) {
+        StringBuilder buff = new StringBuilder(128);
+        buff.append("create index ");
+        buff.append(indexName);
+        buff.append(" on ");
+        buff.append(tableName);
+        buff.append("(");
+        for (int i = 0; i < columnNames.length; i++) {
+            if (i > 0) {
+                buff.append(", ");
+            }
+            buff.append(columnNames[i]);
+        }
         buff.append(")");
         return new String(buff);
     }
@@ -165,6 +184,7 @@ public class ReaderProvider extends ContentProvider {
 
         String groupBy = null;
         String having = null;
+        String limit = null;
         switch (uriMatcher.match(uri)) {
         case UM_SUB_ID:
             qb.setTables(Subscription.TABLE_NAME);
@@ -205,6 +225,7 @@ public class ReaderProvider extends ContentProvider {
             break;
         case UM_ITEMS:
             qb.setTables(Item.TABLE_NAME);
+            limit = "1000";
             break;
         case UM_PIN_ID:
             qb.setTables(Pin.TABLE_NAME);
@@ -220,7 +241,7 @@ public class ReaderProvider extends ContentProvider {
 
         SQLiteDatabase db = this.openHelper.getReadableDatabase();
         Cursor c = qb.query(db, projection, selection, selectionArgs,
-            groupBy, having, sortOrder);
+                groupBy, having, sortOrder, limit);
         c.setNotificationUri(getContext().getContentResolver(), uri);
         return c;
     }

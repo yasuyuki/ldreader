@@ -56,7 +56,7 @@ public class ReaderManager {
         syncSubs(unreadOnly, subsHandler);
 
         try {
-            Thread.sleep(500);
+            Thread.sleep(100);
         } catch (InterruptedException e) {
             return 0;
         }
@@ -179,8 +179,10 @@ public class ReaderManager {
 
             String where = Item._SUBSCRIPTION_ID + " = " + subId
                 + " and " + Item._UNREAD + " = 1";
-            Cursor cursor = cr.query(Item.CONTENT_URI, null, where, null, null);
-            int unreadCount = cursor.getCount();
+            Cursor cursor = cr.query(Item.CONTENT_URI, Item.SELECT_COUNT,
+                where, null, null);
+            cursor.moveToNext();
+            int unreadCount = cursor.getInt(0);
             cursor.close();
 
             ContentValues subValues = new ContentValues();
@@ -264,10 +266,11 @@ public class ReaderManager {
 
     public static int countUnread(Context context) {
         ContentResolver cr = context.getContentResolver();
-        Cursor cursor = cr.query(Item.CONTENT_URI, null,
+        Cursor cursor = cr.query(Item.CONTENT_URI, Item.SELECT_COUNT,
             Item._UNREAD + " = 1", null, null);
         try {
-            return cursor.getCount();
+            cursor.moveToNext();
+            return cursor.getInt(0);
         } finally {
             cursor.close();
         }

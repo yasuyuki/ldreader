@@ -41,4 +41,10 @@
         <item>最大</item>
     </string-array>
 
+    <string-array name="dialog_litem_list_move">
+        <item>最後に読んだ記事</item>
+        <item>最新の未読記事</item>
+        <item>古い未読記事</item>
+    </string-array>
+
 </resources>

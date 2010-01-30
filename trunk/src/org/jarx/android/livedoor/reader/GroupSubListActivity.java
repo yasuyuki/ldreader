@@ -17,6 +17,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -31,8 +32,6 @@ import android.widget.TextView;
 
 public class GroupSubListActivity extends ExpandableListActivity
         implements SubListActivityHelper.SubListable {
-
-    public static final String EXTRA_SUBSCRIPTION_ID = "subscriptionId";
 
     private static final String TAG = "GroupSubListActivity";
     private static final int REQUEST_PREFERENCES = 1;
@@ -67,12 +66,10 @@ public class GroupSubListActivity extends ExpandableListActivity
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.d(TAG, "onCreate()");
 
         Window w = getWindow();
         w.requestFeature(Window.FEATURE_LEFT_ICON);
-        ExpandableListView listView = getExpandableListView();
-        registerForContextMenu(listView);
+        setContentView(R.layout.sub_group_list);
         w.setFeatureDrawableResource(Window.FEATURE_LEFT_ICON, R.drawable.icon_s);
 
         bindService(new Intent(this, ReaderService.class),
@@ -98,11 +95,6 @@ public class GroupSubListActivity extends ExpandableListActivity
                 list.setSelectedChild(groupPosition, childPosition, true);
             }
         }
-    }
-
-    @Override
-    public void onPause() {
-        super.onPause();
     }
 
     @Override
@@ -133,6 +125,15 @@ public class GroupSubListActivity extends ExpandableListActivity
     }
 
     @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_SEARCH) {
+            // NOTE: ignore search
+            return true;
+        }
+        return super.onKeyDown(keyCode, event);
+    }
+
+    @Override
     public Activity getActivity() {
         return this;
     }
@@ -154,8 +155,8 @@ public class GroupSubListActivity extends ExpandableListActivity
         if (subId != null) {
             this.lastGroupPosition = groupPosition;
             this.lastChildPosition = childPosition;
-            startActivity(new Intent(this, ItemActivity.class)
-                .putExtra(EXTRA_SUBSCRIPTION_ID, subId));
+            startActivity(new Intent(this, ItemListActivity.class)
+                .putExtra(ActivityHelper.EXTRA_SUB_ID, subId));
         }
         return true;
     }
@@ -245,7 +246,7 @@ public class GroupSubListActivity extends ExpandableListActivity
                 if (title == null || title.length() == 0) {
                     title = getText(R.string.txt_no_folder);
                 }
-                titleView.setText(title + " (" + cursor.getInt(2) + ")");
+                titleView.setText(title + " (" + cursor.getInt(2) + " feeds)");
                 break;
             case Subscription.GROUP_RATE:
                 if (textLayout.getVisibility() != View.GONE) {
@@ -273,7 +274,7 @@ public class GroupSubListActivity extends ExpandableListActivity
             RatingBar ratingBar = (RatingBar) view.findViewById(R.id.rating_bar);
             TextView etcView = (TextView) view.findViewById(R.id.etc);
 
-            titleView.setText(sub.getTitle() + " (" + sub.getUnreadCount() + " feeds)");
+            titleView.setText(sub.getTitle() + " (" + sub.getUnreadCount() + ")");
             ratingBar.setRating(sub.getRate());
             iconView.setImageBitmap(sub.getIcon());
 

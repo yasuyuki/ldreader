@@ -5,6 +5,7 @@ import android.database.Cursor;
 import android.database.CursorWrapper;
 import android.net.Uri;
 import android.provider.BaseColumns;
+import android.util.Log;
 import static org.jarx.android.livedoor.reader.Utils.*; 
 
 public class Item implements Serializable, BaseColumns {
@@ -13,6 +14,10 @@ public class Item implements Serializable, BaseColumns {
 
     public static final Uri CONTENT_URI
         = Uri.parse(ReaderProvider.ITEM_CONTENT_URI_NAME);
+
+    public static final String[] SELECT_COUNT = {"count(*)"};
+    public static final String[] SELECT_MAX_ID = {"max(" + _ID + ")", "count(*)"};
+    public static final String[] SELECT_MIN_ID = {"min(" + _ID + ")", "count(*)"};
 
     public static final String _SUBSCRIPTION_ID = "subscription_id";
     public static final String _URI = "uri";
@@ -45,8 +50,17 @@ public class Item implements Serializable, BaseColumns {
     };
 
     public static String[] sqlForUpgrade(int oldVersion, int newVersion) {
+        if (oldVersion < 6) {
+            return new String[] {
+                ReaderProvider.sqlCreateIndex(TABLE_NAME,
+                    "idx_item_unread_by_sub_id",
+                    new String[]{_SUBSCRIPTION_ID, _UNREAD})
+            };
+        }
         return new String[0];
     }
+
+    private static final String TAG = "Item";
 
     private long id;
     private long subscriptionId;
@@ -91,6 +105,32 @@ public class Item implements Serializable, BaseColumns {
 
     public void setBody(String body) {
         this.body = body;
+    }
+
+    public String getSummary() {
+        if (this.body == null) {
+            return "";
+        }
+        StringBuilder buff = new StringBuilder(256);
+        long time = this.getCreatedOrModifiedTime();
+        if (time > 0) {
+            buff.append(formatTimeAgo(time));
+        }
+
+        String summary = stripWhitespaces(htmlAsPlainText(this.body));
+        if (summary != null && summary.length() > 0) {
+            if (buff.length() > 0) {
+                buff.append(" | ");
+            }
+            // NOTE: @via twitter 140 / 2 chars
+            if (summary.length() <= 70) {
+                buff.append(summary);
+            } else {
+                buff.append(summary.substring(0, 70));
+                buff.append("...");
+            }
+        }
+        return new String(buff);
     }
 
     public String getUri() {
@@ -182,6 +222,10 @@ public class Item implements Serializable, BaseColumns {
             item.setCreatedTime(this.cursor.getLong(this.posCreatedTime));
             item.setModifiedTime(this.cursor.getLong(this.posModifiedTime));
             return item;
+        }
+
+        public boolean isUnread() {
+            return (this.cursor.getInt(this.posUnread) == 1);
         }
 
         public Cursor getCursor() {

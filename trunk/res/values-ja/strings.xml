@@ -22,8 +22,9 @@
     <string name="msg_no_item_for_title">（記事はありません）</string>
     <string name="msg_no_item">記事はありません</string>
     <string name="msg_no_pin">ピンはありません</string>
+    <string name="msg_touch_running">既読処理を実行中です</string>
     <string name="msg_touch_feed_local">このフィードの記事すべてを既読にしました</string>
-    <string name="msg_touch_all_local">このフィードの記事すべてを既読にしました</string>
+    <string name="msg_touch_all_local">記事すべてを既読にしました</string>
     <string name="msg_confirm_touch_feed_local">このフィードの記事すべてを既読にしますか？</string>
     <string name="msg_confirm_touch_all_local">すべてのフィードを既読にしますか？</string>
     <string name="msg_confirm_browse">ブラウザを起動しますか？</string>
@@ -44,8 +45,9 @@
     <string name="login_title">ログイン</string>
     <string name="pin_title">ピン一覧</string>
 
-    <string name="dialog_subs_view_title">Select View Type</string>
-    <string name="dialog_subs_sort_title">Select Sort Type</string>
+    <string name="dialog_subs_view_title">表示形式の選択</string>
+    <string name="dialog_subs_sort_title">並び替え</string>
+    <string name="dialog_item_list_move_title">記事に移動</string>
 
     <string name="preference_category_account">アカウント</string>
     <string name="preference_login_title">ログイン情報を変更</string>
