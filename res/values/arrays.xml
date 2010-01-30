@@ -56,4 +56,10 @@
         <item>17</item>
     </string-array>
 
+    <string-array name="dialog_litem_list_move">
+        <item>Last read</item>
+        <item>New unread</item>
+        <item>Old unread</item>
+    </string-array>
+
 </resources>

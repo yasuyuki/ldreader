@@ -11,12 +11,10 @@
             android:textSize="12px"
             android:drawSelectorOnTop="false" />
 
-    <TextView android:id="@+id/message"
+    <TextView android:id="@id/android:empty"
             android:layout_width="fill_parent"
             android:layout_height="fill_parent"
             android:gravity="center|center_vertical"
-            android:text="@string/msg_no_subscription"
-            android:visibility="invisible"
-            android:textAppearance="?android:attr/textAppearanceSmall" />
+            android:text="@string/msg_no_item" />
 
 </FrameLayout>

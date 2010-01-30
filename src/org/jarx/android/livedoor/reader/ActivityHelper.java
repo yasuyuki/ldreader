@@ -8,6 +8,10 @@ import android.widget.Toast;
 
 public class ActivityHelper {
 
+    public static final String EXTRA_SUB_ID = "subId";
+    public static final String EXTRA_ITEM_ID = "itemId";
+    public static final String EXTRA_WHERE= "itemWhere";
+
     static void bindTitle(Activity activity) {
         Context context = activity.getApplicationContext();
         String loginId = ReaderPreferences.getLoginId(context);
@@ -37,5 +41,16 @@ public class ActivityHelper {
                 Toast.makeText(context, text, Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    static class Where implements java.io.Serializable {
+
+        StringBuilder buff;
+        String[] args;
+
+        Where(StringBuilder buff, String[] args) {
+            this.buff = buff;
+            this.args = args;
+        }
     }
 }

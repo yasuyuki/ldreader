@@ -26,7 +26,8 @@
                 android:minHeight="32dip"
                 android:textSize="16dip"
                 android:paddingLeft="8dip"
-                android:paddingRight="8dip" />
+                android:paddingRight="8dip"
+                android:gravity="center_vertical" />
 
     </LinearLayout>
 
@@ -49,26 +50,26 @@
                         android:layout_width="fill_parent"
                         android:layout_height="wrap_content"
                         android:minHeight="36dip"
-                        android:paddingLeft="8dip"
+                        android:paddingLeft="28dip"
                         android:paddingRight="28dip"
                         android:textSize="14dip"
                         android:textColor="#000"
                         android:background="#eee" />
 
-                <LinearLayout
-                        android:orientation="horizontal"
-                        android:layout_gravity="right|top"
-                        android:paddingTop="4dip"
-                        android:paddingRight="4dip"
+                <ImageView android:id="@+id/icon_read_unread"
+                        android:src="@drawable/item_unread"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content">
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="left|top"
+                        android:scaleType="center" />
 
-                    <ImageView android:id="@+id/pin"
-                            android:src="@drawable/pin_off"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content" />
-
-                </LinearLayout>
+                <ImageView android:id="@+id/pin"
+                        android:src="@drawable/pin_off"
+                        android:layout_gravity="right|top"
+                        android:paddingTop="2dip"
+                        android:paddingRight="2dip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
 
             </FrameLayout>
 

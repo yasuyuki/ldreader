@@ -20,6 +20,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -44,12 +45,13 @@ public class ItemActivity extends Activity {
     private static final String TAG = "ItemActivity";
 
     private Subscription sub;
-    private Item currentItem;
     private Uri subUri;
-    private Item.FilterCursor itemsCursor;
+    private ActivityHelper.Where baseWhere;
+    private Item currentItem;
     private int itemsCount;
     private int itemsIndex;
-    private boolean unreadOnly = true;
+    private long nextItemId;
+    private long previousItemId;
     private Set<Long> readItemIds = new HashSet<Long>();
     private ImageView pinView;
     private boolean pinOn;
@@ -62,9 +64,6 @@ public class ItemActivity extends Activity {
             ReaderService.ReaderBinder binder = (ReaderService.ReaderBinder) service;
             ItemActivity.this.readerService = binder.getService();
             ItemActivity.this.readerManager = binder.getManager();
-            if (ItemActivity.this.itemsCount == 0) {
-                ItemActivity.this.progressSyncItems();
-            }
         }
         @Override
         public void onServiceDisconnected(ComponentName className) {
@@ -96,13 +95,17 @@ public class ItemActivity extends Activity {
         setContentView(R.layout.item);
         w.setFeatureDrawableResource(Window.FEATURE_LEFT_ICON, R.drawable.icon_s);
 
-        SubListActivity.bindTitle(this);
+        ActivityHelper.bindTitle(this);
 
         Intent intent = getIntent();
-        long subId = intent.getLongExtra(SubListActivity.EXTRA_SUBSCRIPTION_ID, 0);
+        long subId = intent.getLongExtra(ActivityHelper.EXTRA_SUB_ID, 0);
+        long itemId = intent.getLongExtra(ActivityHelper.EXTRA_ITEM_ID, 0);
+        this.baseWhere = (ActivityHelper.Where)
+            intent.getSerializableExtra(ActivityHelper.EXTRA_WHERE);
 
         this.subUri = ContentUris.withAppendedId(Subscription.CONTENT_URI, subId);
-        Cursor cursor = managedQuery(subUri, null, null, null, null);
+        ContentResolver cr = getContentResolver();
+        Cursor cursor = cr.query(subUri, null, null, null, null);
         cursor.moveToFirst();
         this.sub = new Subscription.FilterCursor(cursor).getSubscription();
         cursor.close();
@@ -121,13 +124,13 @@ public class ItemActivity extends Activity {
         final View previous = findViewById(R.id.previous);
         previous.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                ItemActivity.this.previousItem();
+                previousItem();
             }
         });
         final View next = findViewById(R.id.next);
         next.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                ItemActivity.this.nextItem();
+                nextItem();
             }
         });
         final View zoomIn = findViewById(R.id.zoom_in);
@@ -149,7 +152,7 @@ public class ItemActivity extends Activity {
             }
         });
 
-        initItems();
+        initItems(itemId);
     }
 
     @Override
@@ -160,19 +163,8 @@ public class ItemActivity extends Activity {
     }
 
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-        case R.id.menu_item_reload:
-            progressSyncItems();
-            return true;
-        case R.id.menu_item_touch_feed_local:
-            destroyItems(true);
-            initItems();
-            showToast(getText(R.string.msg_touch_feed_local));
-            return true;
-        case R.id.menu_item_move_to_last_read:
-            initItems(true);
-            return true;
+    public boolean onOptionsItemSelected(MenuItem menuItem) {
+        switch (menuItem.getItemId()) {
         case R.id.menu_item_pin:
             progressPin();
             return true;
@@ -204,34 +196,17 @@ public class ItemActivity extends Activity {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        destroyItems(false);
+        destroyItems();
         unbindService(this.serviceConn);
     }
 
-    private void progressSyncItems() {
-        final long subId = this.sub.getId();
-        final ProgressDialog dialog = new ProgressDialog(this);
-        dialog.setIndeterminate(true);
-        dialog.setMessage(getText(R.string.msg_sync_running));
-        dialog.show();
-        new Thread() {
-            public void run() {
-                ReaderManager rm = ItemActivity.this.readerManager;
-                try {
-                    rm.syncItems(subId, false);
-                } catch (IOException e) {
-                    showToast(e);
-                } catch (Throwable e) {
-                    showToast(e);
-                }
-                handler.post(new Runnable() {
-                    public void run() {
-                        ItemActivity.this.initItems();
-                        dialog.dismiss();
-                    }
-                });
-            }
-        }.start();
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_SEARCH) {
+            // NOTE: ignore search
+            return true;
+        }
+        return super.onKeyDown(keyCode, event);
     }
 
     private void progressPin() {
@@ -263,7 +238,7 @@ public class ItemActivity extends Activity {
                 }
                 handler.post(new Runnable() {
                     public void run() {
-                        ItemActivity.this.bindPinView();
+                        bindPinView();
                         dialog.dismiss();
                     }
                 });
@@ -271,73 +246,74 @@ public class ItemActivity extends Activity {
         }.start();
     }
 
-    private void initItems() {
-        initItems(false);
-    }
-
-    private void initItems(boolean moveToLastItem) {
-        if (this.itemsCursor != null && !this.itemsCursor.isClosed()) {
-            this.itemsCursor.close();
+    private void initItems(long itemId) {
+        if (itemId == 0) {
+            itemId = this.sub.getReadItemId();
         }
 
-        long lastItemId = this.sub.getReadItemId();
-        if (moveToLastItem && lastItemId > 0) {
-            Uri itemUri = ContentUris.withAppendedId(Item.CONTENT_URI, lastItemId);
-            Cursor c = managedQuery(itemUri, null, null, null, null);
-            if (c.moveToFirst()) {
-                Item lastItem = new Item.FilterCursor(c).getItem();
-                this.unreadOnly = lastItem.isUnread();
-            } else {
-                lastItemId = 0;
-            }
+        Uri itemUri = ContentUris.withAppendedId(Item.CONTENT_URI, itemId);
+        ContentResolver cr = getContentResolver();
+        Cursor c = cr.query(itemUri, null, null, null, null);
+        if (c.moveToFirst()) {
+            this.currentItem = new Item.FilterCursor(c).getItem();
+        }
+        c.close();
+        if (this.currentItem == null) {
+            return;
+        }
+
+        setResult(RESULT_OK, new Intent()
+            .putExtra(ActivityHelper.EXTRA_ITEM_ID, itemId));
+
+        StringBuilder where = new StringBuilder(this.baseWhere.buff);
+        int baseLength = where.length();
+        String[] whereArgs = null;
+        if (this.baseWhere.args != null) {
+            whereArgs = (String[]) this.baseWhere.args.clone();
+        }
+
+        if (this.itemsCount == 0) {
+            where.setLength(baseLength);
+            c = cr.query(Item.CONTENT_URI, Item.SELECT_COUNT,
+                new String(where), whereArgs, null);
+            c.moveToFirst();
+            this.itemsCount = c.getInt(0);
             c.close();
         }
 
-        String orderby = Item._ID + " desc";
-        String whereBase = Item._SUBSCRIPTION_ID + " = " + this.sub.getId();
-        StringBuilder where = new StringBuilder(whereBase);
-        if (this.unreadOnly) {
-            where.append(" and ");
-            where.append(Item._UNREAD).append(" = 1");
+        where.setLength(baseLength);
+        where.append(" and ");
+        where.append(Item._ID).append(" > ").append(itemId);
+        c = cr.query(Item.CONTENT_URI, Item.SELECT_MIN_ID,
+            new String(where), whereArgs, null);
+        if (c.moveToFirst()) {
+            this.previousItemId = c.getLong(0);
+            this.itemsIndex = c.getInt(1);
+        } else {
+            this.previousItemId = 0;
+            this.itemsIndex = 0;
         }
+        c.close();
 
-        this.itemsIndex = 0;
-        this.itemsCursor = new Item.FilterCursor(managedQuery(
-            Item.CONTENT_URI, null, new String(where), null, orderby));
-        this.itemsCount = this.itemsCursor.getCount();
-
-        if (this.itemsCount == 0 && this.unreadOnly) {
-            where.setLength(whereBase.length());
-            this.itemsCursor.close();
-            this.itemsCursor = new Item.FilterCursor(managedQuery(
-                Item.CONTENT_URI, null, new String(where), null, orderby));
-            this.itemsCount = this.itemsCursor.getCount();
-            this.unreadOnly = false;
+        where.setLength(baseLength);
+        where.append(" and ");
+        where.append(Item._ID).append(" < ").append(itemId);
+        c = cr.query(Item.CONTENT_URI, Item.SELECT_MAX_ID,
+            new String(where), whereArgs, null);
+        if (c.moveToFirst()) {
+            this.nextItemId = c.getLong(0);
+        } else {
+            this.nextItemId = 0;
         }
-
-        if (moveToLastItem && lastItemId > 0 && this.itemsCount > 0) {
-            where.append(" and ");
-            where.append(Item._ID).append(" > ").append(lastItemId);
-            Cursor c = managedQuery(Item.CONTENT_URI, null,
-                new String(where), null, null);
-            this.itemsIndex = c.getCount();
-            c.close();
-        }
+        c.close();
 
         bindSubTitleView();
         bindItemView(ReaderPreferences.isShowItemControlls(
             getApplicationContext()));
     }
 
-    private void destroyItems(boolean touchAllLocal) {
-        if (this.itemsCursor != null && !this.itemsCursor.isClosed()) {
-            this.itemsCursor.close();
-        }
-        this.itemsCursor = null;
-        this.itemsCount = 0;
-        this.itemsIndex = 0;
-
-        if (!touchAllLocal && this.readItemIds.size() == 0) {
+    private void destroyItems() {
+        if (this.readItemIds.size() == 0) {
             return;
         }
 
@@ -346,47 +322,49 @@ public class ItemActivity extends Activity {
         where.append(Item._UNREAD + " = 1");
         where.append(" and ");
         where.append(Item._SUBSCRIPTION_ID + " = " + this.sub.getId());
-        if (!touchAllLocal) {
-            where.append(" and ");
-            where.append(Item._ID + " in (");
-            boolean first = true;
-            for (long itemId: this.readItemIds) {
-                if (first) {
-                    first = false;
-                } else {
-                    where.append(",");
-                }
-                where.append(itemId);
+        where.append(" and ");
+        where.append(Item._ID + " in (");
+        boolean first = true;
+        for (long itemId: this.readItemIds) {
+            if (first) {
+                first = false;
+            } else {
+                where.append(",");
             }
-            where.append(")");
+            where.append(itemId);
         }
+        where.append(")");
+
+        this.readItemIds.clear();
         if (!isFinishing()) {
             where.append(" and ");
             where.append(Item._ID + " <> " + this.sub.getReadItemId());
+            this.readItemIds.add(this.sub.getReadItemId());
         }
 
         ContentValues values = new ContentValues();
         values.put(Item._UNREAD, 0);
-
         ContentResolver cr = getContentResolver();
-        if (cr.update(Item.CONTENT_URI, values, new String(where), null) > 0) {
+        int readCount = cr.update(Item.CONTENT_URI, values,
+            new String(where), null);
+        if (readCount > 0) {
             where.setLength(0);
             where.append(Item._SUBSCRIPTION_ID + " = ").append(this.sub.getId());
             where.append(" and ");
             where.append(Item._UNREAD + " = 1");
-            Cursor cursor = cr.query(Item.CONTENT_URI, null, new String(where),
-                null, null);
-            int unreadCount = cursor.getCount();
-            cursor.close();
+            Cursor c = cr.query(Item.CONTENT_URI, Item.SELECT_COUNT,
+                new String(where), null, null);
+            c.moveToNext();
+            int unreadCount = c.getInt(0);
+            c.close();
 
             ContentValues subValues = new ContentValues();
             subValues.put(Subscription._UNREAD_COUNT, unreadCount);
-            cr.update(this.subUri, subValues, null, null);
+            cr.update(subUri, subValues, null, null);
 
             getApplicationContext().sendBroadcast(
                 new Intent(ReaderService.ACTION_UNREAD_MODIFIED));
         }
-        this.readItemIds.clear();
     }
 
     private void saveReadItemId() {
@@ -402,23 +380,15 @@ public class ItemActivity extends Activity {
 
     private void nextItem() {
         scheduleHideTouchControlViews();
-        if (this.itemsCount > 0) {
-            if (++this.itemsIndex >= this.itemsCount) {
-                this.itemsIndex--;
-            }
-            bindSubTitleView();
-            bindItemView(true);
+        if (this.nextItemId > 0) {
+            initItems(this.nextItemId);
         }
     }
 
     private void previousItem() {
         scheduleHideTouchControlViews();
-        if (this.itemsCount > 0) {
-            if (--this.itemsIndex < 0) {
-                this.itemsIndex = 0;
-            }
-            bindSubTitleView();
-            bindItemView(true);
+        if (this.previousItemId > 0) {
+            initItems(this.previousItemId);
         }
     }
 
@@ -428,8 +398,8 @@ public class ItemActivity extends Activity {
             visible = true;
         }
 
-        boolean hasPrevious = (this.itemsIndex > 0);
-        boolean hasNext = (this.itemsIndex < (this.itemsCount - 1));
+        boolean hasPrevious = (this.previousItemId > 0);
+        boolean hasNext = (this.nextItemId > 0);
 
         final View previous = findViewById(R.id.previous);
         final View next = findViewById(R.id.next);
@@ -497,38 +467,35 @@ public class ItemActivity extends Activity {
         StringBuilder buff = new StringBuilder(64);
         buff.append(this.sub.getTitle());
         if (this.itemsCount > 0) {
-            buff.append(" (");
-            if (this.unreadOnly) {
-                buff.append(getText(R.string.txt_unreads));
-            } else {
-                buff.append(getText(R.string.txt_reads));
-            }
-            buff.append(":");
+            buff.append(" [");
             buff.append(this.itemsIndex + 1);
             buff.append("/");
             buff.append(this.itemsCount);
-            buff.append(")");
+            buff.append("]");
         }
         subTitleView.setText(new String(buff));
     }
 
     private void bindItemView(boolean bindTouchControlViews) {
+        ImageView iconView = (ImageView) findViewById(R.id.icon_read_unread);
         TextView titleView = (TextView) findViewById(R.id.item_title);
         WebView bodyView = (WebView) findViewById(R.id.item_body);
-        if (this.itemsCount > 0
-                && this.itemsCursor.moveToPosition(this.itemsIndex)) {
-            Item item = this.itemsCursor.getItem();
+        Item item = this.currentItem;
+        if (item == null) {
+            titleView.setText(getText(R.string.msg_no_item_for_title));
+            bodyView.clearView();
+        } else {
+            iconView.setImageResource(item.isUnread()
+                ? R.drawable.item_unread: R.drawable.item_read);
             titleView.setText(item.getTitle());
             bodyView.loadDataWithBaseURL(ApiClient.URL_READER,
                 createBodyHtml(item), "text/html", "UTF-8", "about:blank");
             if (bindTouchControlViews) {
                 bindTouchControlViews(true);
             }
-            this.currentItem = item;
-            this.readItemIds.add(item.getId());
-        } else {
-            titleView.setText(getText(R.string.msg_no_item_for_title));
-            bodyView.clearView();
+            if (item.isUnread()) {
+                this.readItemIds.add(item.getId());
+            }
         }
         bindPinView();
     }
@@ -537,14 +504,13 @@ public class ItemActivity extends Activity {
         if (this.currentItem == null) {
             return false;
         }
-        Cursor cursor = managedQuery(Pin.CONTENT_URI, null,
+        ContentResolver cr = getContentResolver();
+        Cursor cursor = cr.query(Pin.CONTENT_URI, null,
             Pin._URI + " = ? and " + Pin._ACTION + " <> " + Pin.ACTION_REMOVE,
             new String[]{this.currentItem.getUri()}, null);
-        try {
-            return (cursor.getCount() > 0);
-        } finally {
-            cursor.close();
-        }
+        boolean exists = (cursor.getCount() > 0);
+        cursor.close();
+        return exists;
     }
 
     private void bindPinView() {
@@ -557,7 +523,7 @@ public class ItemActivity extends Activity {
         }
     }
 
-    private String createBodyHtml(Item item) {
+    private static String createBodyHtml(Item item) {
         String body = item.getBody();
         if (body == null) {
             body = "";

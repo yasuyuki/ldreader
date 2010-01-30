@@ -17,6 +17,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -30,8 +31,6 @@ import android.widget.TextView;
 
 public class SubListActivity extends ListActivity
         implements SubListActivityHelper.SubListable {
-
-    public static final String EXTRA_SUBSCRIPTION_ID = "subscriptionId";
 
     private static final String TAG = "SubListActivity";
 
@@ -62,7 +61,6 @@ public class SubListActivity extends ListActivity
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.d(TAG, "onCreate()");
 
         Window w = getWindow();
         w.requestFeature(Window.FEATURE_LEFT_ICON);
@@ -74,7 +72,7 @@ public class SubListActivity extends ListActivity
         registerReceiver(this.refreshReceiver,
             new IntentFilter(ReaderService.ACTION_SYNC_SUBS_FINISHED));
 
-        bindTitle(this);
+        ActivityHelper.bindTitle(this);
         initListAdapter();
     }
 
@@ -143,9 +141,18 @@ public class SubListActivity extends ListActivity
         Long subId = (Long) v.getTag();
         if (subId != null) {
             this.lastPosition = position;
-            startActivity(new Intent(this, ItemActivity.class)
-                .putExtra(EXTRA_SUBSCRIPTION_ID, subId));
+            startActivity(new Intent(this, ItemListActivity.class)
+                .putExtra(ActivityHelper.EXTRA_SUB_ID, subId));
         }
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_SEARCH) {
+            // NOTE: ignore search
+            return true;
+        }
+        return super.onKeyDown(keyCode, event);
     }
 
     @Override
@@ -169,31 +176,6 @@ public class SubListActivity extends ListActivity
             setListAdapter(this.subsAdapter);
         } else {
             this.subsAdapter.changeCursor(cursor);
-        }
-        bindMessageView();
-    }
-
-    private void bindMessageView() {
-        View message = findViewById(R.id.message);
-        if (this.subsAdapter == null || this.subsAdapter.getCount() == 0) {
-            if (message.getVisibility() != View.VISIBLE) {
-                message.setVisibility(View.VISIBLE);
-            }
-        } else {
-            if (message.getVisibility() != View.INVISIBLE) {
-                message.setVisibility(View.INVISIBLE);
-            }
-        }
-    }
-
-    static void bindTitle(Activity a) {
-        String loginId = ReaderPreferences.getLoginId(a.getApplicationContext());
-        if (loginId != null) {
-            StringBuilder buff = new StringBuilder(64);
-            buff.append(a.getText(R.string.app_name));
-            buff.append(" - ");
-            buff.append(loginId);
-            a.setTitle(new String(buff));
         }
     }
 
@@ -241,12 +223,6 @@ public class SubListActivity extends ListActivity
             etcView.setText(new String(buff));
 
             view.setTag(sub.getId());
-        }
-
-        @Override
-        protected void onContentChanged() {
-            super.onContentChanged();
-            SubListActivity.this.bindMessageView();
         }
     }
 }
