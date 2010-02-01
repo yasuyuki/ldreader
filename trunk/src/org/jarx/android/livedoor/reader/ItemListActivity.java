@@ -411,14 +411,20 @@ public class ItemListActivity extends ListActivity {
         final long subId = this.sub.getId();
         new Thread() {
             public void run() {
+                ContentResolver cr = getContentResolver();
+                ContentValues values = new ContentValues();
+
                 StringBuilder where = new StringBuilder(64);
                 where.append(Item._UNREAD + " = 1");
                 where.append(" and ");
                 where.append(Item._SUBSCRIPTION_ID + " = " + subId);
-                ContentValues values = new ContentValues();
                 values.put(Item._UNREAD, 0);
-                ContentResolver cr = getContentResolver();
                 cr.update(Item.CONTENT_URI, values, new String(where), null);
+
+                values.clear();
+                values.put(Subscription._UNREAD_COUNT, 0);
+                cr.update(ItemListActivity.this.subUri, values, null, null);
+
                 handler.post(new Runnable() {
                     public void run() {
                         initListAdapter();
