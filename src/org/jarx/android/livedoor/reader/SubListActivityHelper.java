@@ -106,12 +106,15 @@ public class SubListActivityHelper extends ActivityHelper {
             public void run() {
                 ContentResolver cr = activity.getContentResolver();
                 ContentValues values = new ContentValues();
+
                 values.put(Item._UNREAD, 0);
                 cr.update(Item.CONTENT_URI, values, Item._UNREAD + " = 1", null);
-                ContentValues subValues = new ContentValues();
-                subValues.put(Subscription._UNREAD_COUNT, 0);
-                cr.update(Subscription.CONTENT_URI, subValues,
+
+                values.clear();
+                values.put(Subscription._UNREAD_COUNT, 0);
+                cr.update(Subscription.CONTENT_URI, values,
                     Subscription._UNREAD_COUNT + " <> 0", null);
+
                 listable.getHandler().post(new Runnable() {
                     public void run() {
                         listable.initListAdapter();
