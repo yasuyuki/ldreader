@@ -21,6 +21,12 @@ public class ReaderProvider extends ContentProvider {
 
     public static final String AUTHORITY = "org.jarx.android.livedoor.reader";
 
+    public static final String BEGIN_TXN_URI_NAME
+        = "content://" + AUTHORITY + "/begin_txn";
+    public static final String SUCCESS_TXN_URI_NAME
+        = "content://" + AUTHORITY + "/success_txn";
+    public static final String END_TXN_URI_NAME
+        = "content://" + AUTHORITY + "/end_txn";
     public static final String SUB_CONTENT_URI_NAME
         = "content://" + AUTHORITY + "/" + Subscription.TABLE_NAME;
     public static final String SUB_FOLDER_CONTENT_URI_NAME
@@ -32,9 +38,13 @@ public class ReaderProvider extends ContentProvider {
     public static final String PIN_CONTENT_URI_NAME
         = "content://" + AUTHORITY + "/" + Pin.TABLE_NAME;
 
+    public static final Uri URI_TXN_BEGIN = Uri.parse(BEGIN_TXN_URI_NAME);
+    public static final Uri URI_TXN_SUCCESS = Uri.parse(SUCCESS_TXN_URI_NAME);
+    public static final Uri URI_TXN_END = Uri.parse(END_TXN_URI_NAME);
+
     private static final String TAG = "ReaderProvider";
     private static final String DATABASE_NAME = "reader.db";
-    private static final int DATABASE_VERSION = 6;
+    private static final int DATABASE_VERSION = 7;
 
     private static final String CONTENT_TYPE_ITEM
         = "vnd.android.cursor.item/vnd." + AUTHORITY;
@@ -42,6 +52,9 @@ public class ReaderProvider extends ContentProvider {
         = "vnd.android.cursor.dir/vnd." + AUTHORITY;
 
     private static final UriMatcher uriMatcher;
+    private static final int UM_BEGIN_TXN = 1;
+    private static final int UM_SUCCESS_TXN = 2;
+    private static final int UM_END_TXN = 3;
     private static final int UM_SUB_ID = 10;
     private static final int UM_SUBS = 11;
     private static final int UM_SUBS_FOLDER = 12;
@@ -53,6 +66,9 @@ public class ReaderProvider extends ContentProvider {
 
     static {
         uriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
+        uriMatcher.addURI(AUTHORITY, "begin_txn", UM_BEGIN_TXN);
+        uriMatcher.addURI(AUTHORITY, "success_txn", UM_SUCCESS_TXN);
+        uriMatcher.addURI(AUTHORITY, "end_txn", UM_END_TXN);
         uriMatcher.addURI(AUTHORITY,
             Subscription.TABLE_NAME + "/#", UM_SUB_ID);
         uriMatcher.addURI(AUTHORITY,
@@ -180,21 +196,40 @@ public class ReaderProvider extends ContentProvider {
     @Override
     public Cursor query(Uri uri, String[] projection, String selection,
             String[] selectionArgs, String sortOrder) {
+        SQLiteDatabase db = this.openHelper.getReadableDatabase();
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
 
         String groupBy = null;
         String having = null;
         String limit = null;
         switch (uriMatcher.match(uri)) {
+        case UM_BEGIN_TXN:
+            db.beginTransaction();
+            return null;
+        case UM_SUCCESS_TXN:
+            db.setTransactionSuccessful();
+            return null;
+        case UM_END_TXN:
+            db.endTransaction();
+            return null;
         case UM_SUB_ID:
+            if (projection == null) {
+                projection = Subscription.DEFAULT_SELECT;
+            }
             qb.setTables(Subscription.TABLE_NAME);
             qb.appendWhere(Subscription._ID + " = "
                 + uri.getPathSegments().get(1));
             break;
         case UM_SUBS:
+            if (projection == null) {
+                projection = Subscription.DEFAULT_SELECT;
+            }
             qb.setTables(Subscription.TABLE_NAME);
             break;
         case UM_SUBS_FOLDER:
+            if (projection == null) {
+                projection = Subscription.DEFAULT_SELECT;
+            }
             qb.setTables(Subscription.TABLE_NAME);
             if (projection == null) {
                 projection = new String[]{
@@ -207,6 +242,9 @@ public class ReaderProvider extends ContentProvider {
             groupBy = Subscription._FOLDER;
             break;
         case UM_SUBS_RATE:
+            if (projection == null) {
+                projection = Subscription.DEFAULT_SELECT;
+            }
             qb.setTables(Subscription.TABLE_NAME);
             if (projection == null) {
                 projection = new String[]{
@@ -225,7 +263,8 @@ public class ReaderProvider extends ContentProvider {
             break;
         case UM_ITEMS:
             qb.setTables(Item.TABLE_NAME);
-            limit = "1000";
+            // PENDING:
+            limit = "200";
             break;
         case UM_PIN_ID:
             qb.setTables(Pin.TABLE_NAME);
@@ -239,7 +278,6 @@ public class ReaderProvider extends ContentProvider {
             throw new IllegalArgumentException("Unknown URI " + uri);
         }
 
-        SQLiteDatabase db = this.openHelper.getReadableDatabase();
         Cursor c = qb.query(db, projection, selection, selectionArgs,
                 groupBy, having, sortOrder, limit);
         c.setNotificationUri(getContext().getContentResolver(), uri);
@@ -254,6 +292,7 @@ public class ReaderProvider extends ContentProvider {
         case UM_SUBS:
             tableName = Subscription.TABLE_NAME;
             contentUri = Subscription.CONTENT_URI;
+            values.put(Subscription._DISABLED, 0);
             break;
         case UM_ITEMS:
             tableName = Item.TABLE_NAME;

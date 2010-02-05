@@ -15,6 +15,8 @@
     <string name="msg_sync_running">Synchronization running.</string>
     <string name="msg_sync_running_read">Item not found. Synchronization running.</string>
     <string name="msg_sync_finished">{0} items synchronized. (unreads {1})</string>
+    <string name="msg_remove_running">Removing..</string>
+    <string name="msg_remove_finished">Removed.</string>
     <string name="msg_pin_all_running">Pin synchronization running.</string>
     <string name="msg_pin_add_running">Pin adding.</string>
     <string name="msg_pin_remove_running">Pin removing.</string>
@@ -45,9 +47,11 @@
     <string name="login_title">Login</string>
     <string name="pin_title">Pin list</string>
 
-    <string name="dialog_subs_view_title">Select View Type</string>
-    <string name="dialog_subs_sort_title">Select Sort Type</string>
+    <string name="dialog_sub_list_view_title">Select view type</string>
+    <string name="dialog_sub_list_sort_title">Select sort type</string>
+    <string name="dialog_sub_list_remove_items">Remove items</string>
     <string name="dialog_item_list_move_title">Move to</string>
+    <string name="dialog_item_list_remove">Remove items</string>
 
     <string name="preference_category_account">Account</string>
     <string name="preference_login_title">Login settings</string>

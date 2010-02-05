@@ -16,6 +16,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.database.Cursor;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -40,6 +41,7 @@ public class ItemListActivity extends ListActivity {
 
     private static final String TAG = "ItemListActivity";
     private static final int DIALOG_MOVE = 1;
+    private static final int DIALOG_REMOVE = 2;
     private static final int REQ_ITEM_ID = 1;
 
     private final Handler handler = new Handler();
@@ -58,8 +60,10 @@ public class ItemListActivity extends ListActivity {
             ReaderService.ReaderBinder binder = (ReaderService.ReaderBinder) service;
             ItemListActivity.this.readerService = binder.getService();
             ItemListActivity.this.readerManager = binder.getManager();
-            if (ItemListActivity.this.itemsAdapter != null
-                    && ItemListActivity.this.itemsAdapter.getCount() == 0) {
+            Subscription s = ItemListActivity.this.sub;
+            ItemsAdapter a = ItemListActivity.this.itemsAdapter;
+            if (s != null && s.getLastItemId() == 0
+                    && a != null && a.getCount() == 0) {
                 ItemListActivity.this.progressSyncItems();
             }
         }
@@ -77,11 +81,7 @@ public class ItemListActivity extends ListActivity {
         bindService(new Intent(this, ReaderService.class), this.serviceConn,
             Context.BIND_AUTO_CREATE);
 
-        Window w = getWindow();
-        w.requestFeature(Window.FEATURE_LEFT_ICON);
         setContentView(R.layout.item_list);
-        w.setFeatureDrawableResource(Window.FEATURE_LEFT_ICON, R.drawable.icon_s);
-
         ActivityHelper.bindTitle(this);
 
         Intent intent = getIntent();
@@ -89,7 +89,12 @@ public class ItemListActivity extends ListActivity {
         this.subUri = ContentUris.withAppendedId(Subscription.CONTENT_URI, subId);
         bindSubTitleView(true);
         ImageView iconView = (ImageView) findViewById(R.id.sub_icon);
-        iconView.setImageBitmap(sub.getIcon());
+        Bitmap icon = sub.getIcon(this);
+        if (icon == null) {
+            iconView.setImageResource(R.drawable.item_read);
+        } else {
+            iconView.setImageBitmap(icon);
+        }
 
         final TextView keywordEdit = (TextView) findViewById(R.id.edit_keyword);
         keywordEdit.setOnKeyListener(new View.OnKeyListener() {
@@ -145,7 +150,8 @@ public class ItemListActivity extends ListActivity {
             cursor.close();
         }
         TextView subTitleView = (TextView) findViewById(R.id.sub_title);
-        subTitleView.setText(this.sub.getTitle() + " (" + this.sub.getUnreadCount() + ")");
+        subTitleView.setText(this.sub.getTitle()
+            + " (" + this.sub.getUnreadCount() + ")");
     }
 
     @Override
@@ -155,7 +161,7 @@ public class ItemListActivity extends ListActivity {
             return new AlertDialog.Builder(this)
                 .setIcon(R.drawable.alert_dialog_icon)
                 .setTitle(R.string.dialog_item_list_move_title)
-                .setSingleChoiceItems(R.array.dialog_litem_list_move, 0,
+                .setSingleChoiceItems(R.array.dialog_item_list_move, 0,
                     new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int i) {
                             switch (i) {
@@ -169,6 +175,17 @@ public class ItemListActivity extends ListActivity {
                                 moveToOldUnread();
                                 break;
                             }
+                            dialog.dismiss();
+                        }
+                    }
+                ).create();
+        case DIALOG_REMOVE:
+            return new AlertDialog.Builder(this)
+                .setTitle(R.string.dialog_item_list_remove)
+                .setSingleChoiceItems(R.array.dialog_item_list_remove_items, 0,
+                    new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int i) {
+                            progressRemoveItems(i == 0);
                             dialog.dismiss();
                         }
                     }
@@ -202,6 +219,9 @@ public class ItemListActivity extends ListActivity {
         case R.id.menu_search:
             toggleSearchBar();
             return true;
+        case R.id.menu_remove:
+            showDialog(DIALOG_REMOVE);
+            return true;
         case R.id.menu_item_setting:
             startActivity(new Intent(this, ReaderPreferenceActivity.class));
             return true;
@@ -213,6 +233,9 @@ public class ItemListActivity extends ListActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQ_ITEM_ID && data != null) {
             this.lastItemId = data.getLongExtra(ActivityHelper.EXTRA_ITEM_ID, 0);
+            bindSubTitleView(true);
+            initListAdapter();
+            moveToItemId(this.lastItemId);
         }
     }
 
@@ -377,6 +400,43 @@ public class ItemListActivity extends ListActivity {
         cursor.moveToPosition(pos);
     }
 
+    private void progressRemoveItems(final boolean all) {
+        final long subId = this.sub.getId();
+        final ProgressDialog dialog = new ProgressDialog(this);
+        dialog.setIndeterminate(true);
+        dialog.setMessage(getText(R.string.msg_remove_running));
+        dialog.show();
+        new Thread() {
+            public void run() {
+                StringBuilder where = new StringBuilder(64);
+                where.append(Item._SUBSCRIPTION_ID).append(" = ").append(subId);
+                if (!all) {
+                    where.append(" and ");
+                    where.append(Item._UNREAD).append(" = 0");
+                }
+                ContentResolver cr = getContentResolver();
+                cr.delete(Item.CONTENT_URI, new String(where), null);
+                if (all) {
+                    ContentValues values = new ContentValues();
+                    values.put(Subscription._UNREAD_COUNT, 0);
+                    cr.update(ItemListActivity.this.subUri, values, null, null);
+                }
+                handler.post(new Runnable() {
+                    public void run() {
+                        showToast(getText(R.string.msg_remove_finished));
+                        if (all) {
+                            sendBroadcast(new Intent(
+                                ReaderService.ACTION_UNREAD_MODIFIED));
+                            bindSubTitleView(true);
+                        }
+                        initListAdapter();
+                        dialog.dismiss();
+                    }
+                });
+            }
+        }.start();
+    }
+
     private void progressSyncItems() {
         final long subId = this.sub.getId();
         final ProgressDialog dialog = new ProgressDialog(this);
@@ -459,7 +519,7 @@ public class ItemListActivity extends ListActivity {
 
         private ItemsAdapter(Context context, Cursor cursor) {
             super(context, R.layout.item_list_row,
-                new Item.FilterCursor(cursor));
+                new Item.FilterCursor(cursor), false);
         }
 
         private Item.FilterCursor getItemCursor() {
