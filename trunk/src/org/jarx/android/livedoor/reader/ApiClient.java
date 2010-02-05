@@ -54,7 +54,6 @@ public class ApiClient {
     private static final String URL_API_PIN_CLEAR = URL_API_BASE + "/pin/clear";
     private static final String URL_RPC_NOTIFY = "http://rpc.reader.livedoor.com/notify";
 
-    private final JSONParser parser = new JSONParser();
     private final DefaultHttpClient client;
     private String loginId;
     private String password;
@@ -175,7 +174,7 @@ public class ApiClient {
 
     public void handleSubs(boolean unread, int fromId, int limit, ContentHandler handler)
             throws IOException, ParseException, ReaderException {
-        this.parser.parse(readSubs(unread, fromId, limit), handler);
+        new JSONParser().parse(readSubs(unread, fromId, limit), handler);
     }
 
     public JSONArray subs(boolean unread, int fromId, int limit)
@@ -199,7 +198,7 @@ public class ApiClient {
 
     public void handleAll(long subId, int offset, int limit, ContentHandler handler)
             throws IOException, ParseException, ReaderException {
-        this.parser.parse(readAll(subId, offset, limit), handler);
+        new JSONParser().parse(readAll(subId, offset, limit), handler);
     }
 
     public JSONArray all(long subId, int offset, int limit)
@@ -221,7 +220,7 @@ public class ApiClient {
 
     public void handleUnread(long subId, ContentHandler handler)
             throws IOException, ParseException, ReaderException {
-        this.parser.parse(readUnread(subId), handler);
+        new JSONParser().parse(readUnread(subId), handler);
     }
 
     public JSONArray unread(long subId)
@@ -258,7 +257,7 @@ public class ApiClient {
 
     public void handlePinAll(ContentHandler handler)
             throws IOException, ParseException, ReaderException {
-        this.parser.parse(readPinAll(), handler);
+        new JSONParser().parse(readPinAll(), handler);
     }
 
     /** implements /api/pin/add */
@@ -396,11 +395,11 @@ public class ApiClient {
 
     private JSONArray toJSONArray(java.io.Reader in)
             throws IOException, ParseException {
-        return (JSONArray) parser.parse(readString(in));
+        return (JSONArray) new JSONParser().parse(readString(in));
     }
 
     private JSONObject toJSONObject(java.io.Reader in)
             throws IOException, ParseException {
-        return (JSONObject) parser.parse(readString(in));
+        return (JSONObject) new JSONParser().parse(readString(in));
     }
 }

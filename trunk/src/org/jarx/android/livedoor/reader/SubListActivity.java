@@ -13,6 +13,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.database.Cursor;
+import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -61,11 +62,7 @@ public class SubListActivity extends ListActivity
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        Window w = getWindow();
-        w.requestFeature(Window.FEATURE_LEFT_ICON);
         setContentView(R.layout.sub_list);
-        w.setFeatureDrawableResource(Window.FEATURE_LEFT_ICON, R.drawable.icon_s);
 
         bindService(new Intent(this, ReaderService.class),
             this.serviceConn, Context.BIND_AUTO_CREATE);
@@ -160,17 +157,19 @@ public class SubListActivity extends ListActivity
         this.lastPosition = 0;
 
         Context context = getApplicationContext();
-        String where = null;
+        StringBuilder where = new StringBuilder(64);
+        where.append(Subscription._DISABLED).append(" = 0");
         if (ReaderPreferences.isViewUnreadOnly(context)) {
-            where = Subscription._UNREAD_COUNT + " > 0";
+            where.append(" and ");
+            where.append(Subscription._UNREAD_COUNT).append(" > 0");
         }
         int subsSort = ReaderPreferences.getSubsSort(context);
         if (subsSort < 1 || subsSort > Subscription.SORT_ORDERS.length) {
             subsSort = 1;
         }
         String orderby = Subscription.SORT_ORDERS[subsSort - 1];
-        Cursor cursor = managedQuery(Subscription.CONTENT_URI,
-            null, where, null, orderby);
+        Cursor cursor = managedQuery(Subscription.CONTENT_URI, null,
+           new String(where), null, orderby);
         if (this.subsAdapter == null) {
             this.subsAdapter = new SubsAdapter(this, cursor);
             setListAdapter(this.subsAdapter);
@@ -183,7 +182,7 @@ public class SubListActivity extends ListActivity
 
         private SubsAdapter(Context context, Cursor cursor) {
             super(context, R.layout.sub_list_row,
-                new Subscription.FilterCursor(cursor));
+                new Subscription.FilterCursor(cursor), false);
         }
 
         private void closeCursor() {
@@ -210,7 +209,12 @@ public class SubListActivity extends ListActivity
             Subscription sub = subCursor.getSubscription();
             titleView.setText(sub.getTitle() + " (" + sub.getUnreadCount() + ")");
             ratingBar.setRating(sub.getRate());
-            iconView.setImageBitmap(sub.getIcon());
+            Bitmap icon = sub.getIcon(SubListActivity.this);
+            if (icon == null) {
+                iconView.setImageResource(R.drawable.item_read);
+            } else {
+                iconView.setImageBitmap(icon);
+            }
 
             StringBuilder buff = new StringBuilder(64);
             buff.append(sub.getSubscribersCount());

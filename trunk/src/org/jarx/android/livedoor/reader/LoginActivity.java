@@ -28,7 +28,6 @@ public class LoginActivity extends Activity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.d(TAG, "onCreate()");
 
         String loginId = ReaderPreferences.getLoginId(getApplicationContext());
         String caller = getIntent().getAction();

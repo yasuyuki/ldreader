@@ -3,6 +3,7 @@ package org.jarx.android.livedoor.reader;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLongArray;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
@@ -15,6 +16,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.database.Cursor;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -52,7 +54,7 @@ public class ItemActivity extends Activity {
     private int itemsIndex;
     private long nextItemId;
     private long previousItemId;
-    private Set<Long> readItemIds = new HashSet<Long>();
+    private HashSet<Long> readItemIds;
     private ImageView pinView;
     private boolean pinOn;
     private ReaderService readerService;
@@ -79,27 +81,41 @@ public class ItemActivity extends Activity {
         }
     };
 
-    private final Animation previousHideAnimation = new AlphaAnimation(1F, 0F);
-    private final Animation nextHideAnimation = new AlphaAnimation(1F, 0F);
-    private final Animation zoomControllsHideAnimation = new AlphaAnimation(1F, 0F);
+    private final Animation previousHideAnimation = new AlphaAnimation(1f, 0f);
+    private final Animation nextHideAnimation = new AlphaAnimation(1f, 0f);
+    private final Animation zoomControllsHideAnimation = new AlphaAnimation(1f, 0f);
 
     @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    public void onCreate(Bundle savedState) {
+        super.onCreate(savedState);
 
         bindService(new Intent(this, ReaderService.class), this.serviceConn,
             Context.BIND_AUTO_CREATE);
 
-        Window w = getWindow();
-        w.requestFeature(Window.FEATURE_LEFT_ICON);
         setContentView(R.layout.item);
-        w.setFeatureDrawableResource(Window.FEATURE_LEFT_ICON, R.drawable.icon_s);
-
         ActivityHelper.bindTitle(this);
+
+        long itemId = 0;
+        if (savedState != null) {
+            itemId = savedState.getLong("itemId", 0);
+            // NOTE: wrong code (for Xlint:unchecked)
+            Long[] ids = (Long[]) savedState.getSerializable("readItemIds");
+            if (ids != null) {
+                this.readItemIds = new HashSet<Long>(ids.length * 2);
+                for (Long id: ids) {
+                    this.readItemIds.add(id);
+                }
+            }
+        }
+        if (this.readItemIds == null) {
+            this.readItemIds = new HashSet<Long>(32);
+        }
 
         Intent intent = getIntent();
         long subId = intent.getLongExtra(ActivityHelper.EXTRA_SUB_ID, 0);
-        long itemId = intent.getLongExtra(ActivityHelper.EXTRA_ITEM_ID, 0);
+        if (itemId == 0) {
+            itemId = intent.getLongExtra(ActivityHelper.EXTRA_ITEM_ID, 0);
+        }
         this.baseWhere = (ActivityHelper.Where)
             intent.getSerializableExtra(ActivityHelper.EXTRA_WHERE);
 
@@ -111,7 +127,12 @@ public class ItemActivity extends Activity {
         cursor.close();
 
         ImageView iconView = (ImageView) findViewById(R.id.sub_icon);
-        iconView.setImageBitmap(sub.getIcon());
+        Bitmap icon = sub.getIcon(this);
+        if (icon == null) {
+            iconView.setImageResource(R.drawable.item_read);
+        } else {
+            iconView.setImageBitmap(icon);
+        }
 
         final WebView bodyView = (WebView) findViewById(R.id.item_body);
         bodyView.setOnTouchListener(new BodyWebViewTouchListener());
@@ -191,13 +212,21 @@ public class ItemActivity extends Activity {
     public void onPause() {
         super.onPause();
         saveReadItemId();
+        destroyItems();
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        destroyItems();
         unbindService(this.serviceConn);
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putSerializable("readItemIds",
+            this.readItemIds.toArray(new Long[this.readItemIds.size()]));
+        outState.putLong("itemId", this.currentItem.getId());
     }
 
     @Override
@@ -250,7 +279,6 @@ public class ItemActivity extends Activity {
         if (itemId == 0) {
             itemId = this.sub.getReadItemId();
         }
-
         Uri itemUri = ContentUris.withAppendedId(Item.CONTENT_URI, itemId);
         ContentResolver cr = getContentResolver();
         Cursor c = cr.query(itemUri, null, null, null, null);

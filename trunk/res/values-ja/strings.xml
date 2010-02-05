@@ -15,12 +15,14 @@
     <string name="msg_sync_running">取り込みを実行中です</string>
     <string name="msg_sync_running_read">未読が見つかりません。既読の取り込みを実行中です</string>
     <string name="msg_sync_finished">{0}件の記事を取り込みました（未読 {1}件）</string>
+    <string name="msg_remove_running">記事を削除しています</string>
+    <string name="msg_remove_finished">記事を削除しました</string>
     <string name="msg_pin_all_running">ピンの取り込みを実行中です</string>
     <string name="msg_pin_add_running">ピンを追加しています</string>
     <string name="msg_pin_remove_running">ピンを削除しています</string>
-    <string name="msg_no_subscription">表示するフィードはありません</string>
+    <string name="msg_no_subscription">表示できるフィードはありません</string>
     <string name="msg_no_item_for_title">（記事はありません）</string>
-    <string name="msg_no_item">記事はありません</string>
+    <string name="msg_no_item">表示できる記事はありません</string>
     <string name="msg_no_pin">ピンはありません</string>
     <string name="msg_touch_running">既読処理を実行中です</string>
     <string name="msg_touch_feed_local">このフィードの記事すべてを既読にしました</string>
@@ -45,9 +47,11 @@
     <string name="login_title">ログイン</string>
     <string name="pin_title">ピン一覧</string>
 
-    <string name="dialog_subs_view_title">表示形式の選択</string>
-    <string name="dialog_subs_sort_title">並び替え</string>
+    <string name="dialog_sub_list_view_title">表示形式の選択</string>
+    <string name="dialog_sub_list_sort_title">並び替え</string>
+    <string name="dialog_sub_list_remove_items">記事の削除</string>
     <string name="dialog_item_list_move_title">記事に移動</string>
+    <string name="dialog_item_list_remove">記事の削除</string>
 
     <string name="preference_category_account">アカウント</string>
     <string name="preference_login_title">ログイン情報を変更</string>

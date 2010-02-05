@@ -2,6 +2,10 @@ package org.jarx.android.livedoor.reader;
 
 import java.io.Serializable;
 import java.util.Comparator;
+import java.util.ArrayList;
+import android.content.ContentResolver;
+import android.content.ContentUris;
+import android.content.Context;
 import android.database.Cursor;
 import android.database.CursorWrapper;
 import android.graphics.BitmapFactory;
@@ -33,9 +37,18 @@ public final class Subscription implements Serializable, BaseColumns {
     public static final String _FOLDER = "folder";
     public static final String _MODIFIED_TIME = "modified_time";
     public static final String _ITEM_SYNC_TIME = "item_sync_time";
-    // NOTE database version 5 or later
+    // NOTE: database version 5 or later
     public static final String _DISABLED = "disabled";
     public static final String _READ_ITEM_ID = "read_item_id";
+    // NOTE: database version 7 or later
+    public static final String _LAST_ITEM_ID = "last_item_id";
+
+    public static final String[] DEFAULT_SELECT = {
+        _ID, _URI, _TITLE, _RATE, _SUBSCRIBERS_COUNT, _UNREAD_COUNT,
+        _FOLDER, _MODIFIED_TIME, _ITEM_SYNC_TIME, _DISABLED,
+        _READ_ITEM_ID, _LAST_ITEM_ID
+    };
+    public static final String[] SELECT_ICON = {_ICON};
 
     public static final int GROUP_FOLDER = 1;
     public static final int GROUP_RATE = 2;
@@ -53,8 +66,9 @@ public final class Subscription implements Serializable, BaseColumns {
         + _FOLDER + " text,"
         + _MODIFIED_TIME + " integer,"
         + _ITEM_SYNC_TIME + " integer default 0,"
-        + _DISABLED + " integer,"
-        + _READ_ITEM_ID + " integer"
+        + _DISABLED + " integer default 0,"
+        + _READ_ITEM_ID + " integer,"
+        + _LAST_ITEM_ID + " integer"
         + ")";
 
     public static final String[] INDEX_COLUMNS = {
@@ -79,14 +93,30 @@ public final class Subscription implements Serializable, BaseColumns {
     };
 
     public static String[] sqlForUpgrade(int oldVersion, int newVersion) {
+        ArrayList<String> sqls = new ArrayList<String>(6);
         if (oldVersion < 5) {
-            return new String[] {
-                "alter table " + TABLE_NAME + " add " + _DISABLED + " integer",
-                "alter table " + TABLE_NAME + " add " + _READ_ITEM_ID + " integer",
-                ReaderProvider.sqlCreateIndex(TABLE_NAME, _DISABLED)
-            };
+            sqls.add("alter table " + TABLE_NAME
+                + " add " + _DISABLED + " integer");
+            sqls.add("alter table " + TABLE_NAME
+                + " add " + _READ_ITEM_ID + " integer");
+            sqls.add(ReaderProvider.sqlCreateIndex(TABLE_NAME, _DISABLED));
         }
-        return new String[0];
+        if (oldVersion < 7) {
+            sqls.add("alter table " + TABLE_NAME
+                + " add " + _LAST_ITEM_ID + " integer");
+            sqls.add("update " + TABLE_NAME + " set " + _LAST_ITEM_ID
+                + " = (select max(" + Item.TABLE_NAME + "." + Item._ID
+                + ") from " + Item.TABLE_NAME + " where "
+                + Item.TABLE_NAME + "." + Item._SUBSCRIPTION_ID
+                + " = " + TABLE_NAME + "." + _ID + "), "
+                + _DISABLED + " = 0");
+            sqls.add(ReaderProvider.sqlCreateIndex(TABLE_NAME,
+                    "idx_subscription_uc_d",
+                    new String[]{_UNREAD_COUNT, _DISABLED}));
+            // PENDING: sqlite3 not supported.
+            // alter table subscription *modify* disabled integer default 0
+        }
+        return sqls.toArray(new String[sqls.size()]);
     }
 
     private long id;
@@ -102,6 +132,7 @@ public final class Subscription implements Serializable, BaseColumns {
     private long itemSyncTime;
     private boolean disabled;
     private long readItemId;
+    private long lastItemId;
 
     public Subscription() {
     }
@@ -138,12 +169,23 @@ public final class Subscription implements Serializable, BaseColumns {
         this.iconUri = iconUri;
     }
 
-    public Bitmap getIcon() {
-        return this.icon;
-    }
-
-    public void setIcon(Bitmap icon) {
-        this.icon = icon;
+    public Bitmap getIcon(Context context) {
+        ContentResolver cr = context.getContentResolver();
+        Uri uri = ContentUris.withAppendedId(CONTENT_URI, this.getId());
+        Cursor cursor = cr.query(uri, SELECT_ICON, null, null, null);
+        try {
+            cursor.moveToFirst();
+            byte[] data = cursor.getBlob(0);
+            if (data != null) {
+                return BitmapFactory.decodeByteArray(
+                    data, 0, data.length);
+            }
+        } catch (OutOfMemoryError e) {
+            // NOTE: ignore, display no icon
+        } finally {
+            cursor.close();
+        }
+        return null;
     }
 
     public int getRate() {
@@ -210,6 +252,14 @@ public final class Subscription implements Serializable, BaseColumns {
         this.readItemId = readItemId;
     }
 
+    public long getLastItemId() {
+        return this.lastItemId;
+    }
+
+    public void setLastItemId(long lastItemId) {
+        this.lastItemId = lastItemId;
+    }
+
     public boolean equals(Object o) {
         if (o == this) {
             return true;
@@ -232,7 +282,6 @@ public final class Subscription implements Serializable, BaseColumns {
         private final int posId;
         private final int posUri;
         private final int posTitle;
-        private final int posIcon;
         private final int posRate;
         private final int posSubsCount;
         private final int posUnreadCount;
@@ -241,6 +290,7 @@ public final class Subscription implements Serializable, BaseColumns {
         private final int posItemSyncTime;
         private final int posDisabled;
         private final int posReadItemId;
+        private final int posLastItemId;
 
         public FilterCursor(Cursor cursor) {
             this(cursor, null);
@@ -253,7 +303,6 @@ public final class Subscription implements Serializable, BaseColumns {
             this.posId = cursor.getColumnIndex(Subscription._ID);
             this.posUri = cursor.getColumnIndex(Subscription._URI);
             this.posTitle = cursor.getColumnIndex(Subscription._TITLE);
-            this.posIcon = cursor.getColumnIndex(Subscription._ICON);
             this.posRate = cursor.getColumnIndex(Subscription._RATE);
             this.posSubsCount = cursor.getColumnIndex(Subscription._SUBSCRIBERS_COUNT);
             this.posUnreadCount = cursor.getColumnIndex(Subscription._UNREAD_COUNT);
@@ -262,6 +311,7 @@ public final class Subscription implements Serializable, BaseColumns {
             this.posItemSyncTime = cursor.getColumnIndex(Subscription._ITEM_SYNC_TIME);
             this.posDisabled = cursor.getColumnIndex(Subscription._DISABLED);
             this.posReadItemId = cursor.getColumnIndex(Subscription._READ_ITEM_ID);
+            this.posLastItemId = cursor.getColumnIndex(Subscription._LAST_ITEM_ID);
         }
 
         public Subscription getSubscription() {
@@ -276,13 +326,8 @@ public final class Subscription implements Serializable, BaseColumns {
             sub.setModifiedTime(this.cursor.getLong(this.posModifiedTime));
             sub.setItemSyncTime(this.cursor.getLong(this.posItemSyncTime));
             sub.setDisabled(this.cursor.getInt(this.posDisabled) == 1);
-            sub.setReadItemId(this.cursor.getInt(this.posReadItemId));
-            byte[] data = cursor.getBlob(this.posIcon);
-            if (data != null) {
-                Bitmap icon = BitmapFactory.decodeByteArray(data, 0, data.length);
-                sub.setIcon(icon);
-                data = null;
-            }
+            sub.setReadItemId(this.cursor.getLong(this.posReadItemId));
+            sub.setLastItemId(this.cursor.getLong(this.posLastItemId));
             return sub;
         }
 

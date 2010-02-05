@@ -24,20 +24,21 @@ public class SubListActivityHelper extends ActivityHelper {
     }
 
     static final int REQUEST_PREFERENCES = 1;
-    static final int DIALOG_SUBS_VIEW = 1;
-    static final int DIALOG_SUBS_SORT = 2;
+    static final int DIALOG_VIEW_TYPE = 1;
+    static final int DIALOG_SORT_TYPE = 2;
     static final int DIALOG_TOUCH_ALL_LOCAL = 3;
+    static final int DIALOG_REMOVE_ITEMS = 4;
 
     static Dialog onCreateDialog(final SubListable listable, int id) {
         final Activity activity = listable.getActivity();
         final Context context = activity.getApplicationContext();
         switch (id) {
-        case DIALOG_SUBS_VIEW:
+        case DIALOG_VIEW_TYPE:
             int subsViewWhich = ReaderPreferences.getSubsView(context) - 1;
             return new AlertDialog.Builder(activity)
                 .setIcon(R.drawable.alert_dialog_icon)
-                .setTitle(R.string.dialog_subs_view_title)
-                .setSingleChoiceItems(R.array.dialog_subs_view_items, subsViewWhich,
+                .setTitle(R.string.dialog_sub_list_view_title)
+                .setSingleChoiceItems(R.array.dialog_sub_list_view, subsViewWhich,
                     new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int which) {
                             ReaderPreferences.setSubsView(context, which + 1);
@@ -47,12 +48,12 @@ public class SubListActivityHelper extends ActivityHelper {
                         }
                     }
                 ).create();
-        case DIALOG_SUBS_SORT:
+        case DIALOG_SORT_TYPE:
             int defaultWhich = ReaderPreferences.getSubsSort(context) - 1;
             return new AlertDialog.Builder(activity)
                 .setIcon(R.drawable.alert_dialog_icon)
-                .setTitle(R.string.dialog_subs_sort_title)
-                .setSingleChoiceItems(R.array.dialog_subs_sort_items, defaultWhich,
+                .setTitle(R.string.dialog_sub_list_sort_title)
+                .setSingleChoiceItems(R.array.dialog_sub_list_sort, defaultWhich,
                     new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int which) {
                             ReaderPreferences.setSubsSort(context, which + 1);
@@ -74,6 +75,17 @@ public class SubListActivityHelper extends ActivityHelper {
                     public void onClick(DialogInterface dialog, int whichButton) {
                     }
                 }).create();
+        case DIALOG_REMOVE_ITEMS:
+            return new AlertDialog.Builder(activity)
+                .setTitle(R.string.dialog_sub_list_remove_items)
+                .setSingleChoiceItems(R.array.dialog_sub_list_remove_items, 0,
+                    new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int i) {
+                            progressRemoveItems(listable, i == 0);
+                            dialog.dismiss();
+                        }
+                    }
+                ).create();
         }
         return null;
     }
@@ -125,6 +137,42 @@ public class SubListActivityHelper extends ActivityHelper {
         }.start();
     }
 
+    static void progressRemoveItems(final SubListable listable,
+            final boolean all) {
+        final Activity activity = listable.getActivity();
+        final Context context = activity.getApplicationContext();
+        final ProgressDialog dialog = new ProgressDialog(activity);
+        dialog.setIndeterminate(true);
+        dialog.setMessage(activity.getText(R.string.msg_remove_running));
+        dialog.show();
+        new Thread() {
+            public void run() {
+                String where = null;
+                if (!all) {
+                    where = Item._UNREAD + " = 0";
+                }
+                ContentResolver cr = activity.getContentResolver();
+                cr.delete(Item.CONTENT_URI, where, null);
+                if (all) {
+                    ContentValues values = new ContentValues();
+                    values.put(Subscription._UNREAD_COUNT, 0);
+                    cr.update(Subscription.CONTENT_URI, values, null, null);
+                    context.sendBroadcast(
+                        new Intent(ReaderService.ACTION_UNREAD_MODIFIED));
+                }
+                listable.getHandler().post(new Runnable() {
+                    public void run() {
+                        showToast(context, activity.getText(
+                            R.string.msg_remove_finished));
+                        listable.initListAdapter();
+                        dialog.dismiss();
+                    }
+                });
+            }
+        }.start();
+    }
+
+
     static boolean onCreateOptionsMenu(SubListable listable, Menu menu) {
         MenuInflater inflater = listable.getActivity().getMenuInflater();
         inflater.inflate(R.menu.sub_list, menu);
@@ -143,17 +191,20 @@ public class SubListActivityHelper extends ActivityHelper {
             }
             listable.initListAdapter();
             return true;
-        case R.id.menu_item_subs_view:
-            activity.showDialog(DIALOG_SUBS_VIEW);
+        case R.id.menu_item_view_type:
+            activity.showDialog(DIALOG_VIEW_TYPE);
             return true;
-        case R.id.menu_item_subs_sort:
-            activity.showDialog(DIALOG_SUBS_SORT);
+        case R.id.menu_item_sort_type:
+            activity.showDialog(DIALOG_SORT_TYPE);
             return true;
         case R.id.menu_item_touch_all_local:
             activity.showDialog(DIALOG_TOUCH_ALL_LOCAL);
             return true;
         case R.id.menu_item_pin:
             activity.startActivity(new Intent(activity, PinActivity.class));
+            return true;
+        case R.id.menu_item_remove_items:
+            activity.showDialog(DIALOG_REMOVE_ITEMS);
             return true;
         case R.id.menu_item_setting:
             activity.startActivityForResult(new Intent(activity,

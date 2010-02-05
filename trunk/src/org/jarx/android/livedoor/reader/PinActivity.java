@@ -62,10 +62,7 @@ public class PinActivity extends ListActivity {
         bindService(new Intent(this, ReaderService.class), this.serviceConn,
             Context.BIND_AUTO_CREATE);
 
-        Window w = getWindow();
-        w.requestFeature(Window.FEATURE_LEFT_ICON);
         setContentView(R.layout.pin);
-        w.setFeatureDrawableResource(Window.FEATURE_LEFT_ICON, R.drawable.ic_menu_agenda);
 
         final View clearAll = findViewById(R.id.clear_all);
         clearAll.setOnClickListener(new View.OnClickListener() {
@@ -117,7 +114,7 @@ public class PinActivity extends ListActivity {
         new AlertDialog.Builder(this)
             .setTitle(pin.getTitle())
             .setNegativeButton("Cancel", null)
-            .setItems(R.array.dialog_pin_action_items, new PinActionListener(pin)).show();
+            .setItems(R.array.dialog_pin_action, new PinActionListener(pin)).show();
     }
 
     private Cursor listQuery() {

@@ -12,6 +12,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.database.Cursor;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -66,11 +67,7 @@ public class GroupSubListActivity extends ExpandableListActivity
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        Window w = getWindow();
-        w.requestFeature(Window.FEATURE_LEFT_ICON);
         setContentView(R.layout.sub_group_list);
-        w.setFeatureDrawableResource(Window.FEATURE_LEFT_ICON, R.drawable.icon_s);
 
         bindService(new Intent(this, ReaderService.class),
             this.serviceConn, Context.BIND_AUTO_CREATE);
@@ -167,21 +164,23 @@ public class GroupSubListActivity extends ExpandableListActivity
         this.lastChildPosition = -1;
 
         Context context = getApplicationContext();
-        String where = null;
+        StringBuilder where = new StringBuilder(64);
+        where.append(Subscription._DISABLED).append(" = 0");
         if (ReaderPreferences.isViewUnreadOnly(context)) {
-            where = Subscription._UNREAD_COUNT + " > 0";
+            where.append(" and ");
+            where.append(Subscription._UNREAD_COUNT).append(" > 0");
         }
-        String orderBy;
+        String orderby;
         Uri uri;
         int subsView = ReaderPreferences.getSubsView(context);
         if (subsView == 2) {
             uri = Subscription.FOLDER_CONTENT_URI;
-            orderBy = Subscription._FOLDER + " asc";
+            orderby = Subscription._FOLDER + " asc";
         } else {
             uri = Subscription.RATE_CONTENT_URI;
-            orderBy = Subscription._RATE + " desc";
+            orderby = Subscription._RATE + " desc";
         }
-        Cursor cursor = managedQuery(uri, null, where, null, orderBy);
+        Cursor cursor = managedQuery(uri, null, new String(where), null, orderby);
         if (this.subsAdapter == null) {
             this.subsAdapter = new SubsAdapter(this, cursor);
             setListAdapter(this.subsAdapter);
@@ -276,7 +275,12 @@ public class GroupSubListActivity extends ExpandableListActivity
 
             titleView.setText(sub.getTitle() + " (" + sub.getUnreadCount() + ")");
             ratingBar.setRating(sub.getRate());
-            iconView.setImageBitmap(sub.getIcon());
+            Bitmap icon = sub.getIcon(GroupSubListActivity.this);
+            if (icon == null) {
+                iconView.setImageResource(R.drawable.item_read);
+            } else {
+                iconView.setImageBitmap(icon);
+            }
 
             StringBuilder buff = new StringBuilder(64);
             buff.append(sub.getSubscribersCount());

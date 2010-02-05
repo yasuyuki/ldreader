@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string-array name="dialog_subs_view_items">
+    <string-array name="dialog_sub_list_view">
         <item>Flat</item>
         <item>Folder</item>
         <item>Rating</item>
     </string-array>
 
-    <string-array name="dialog_subs_sort_items">
+    <string-array name="dialog_sub_list_sort">
         <item>Recent</item>
         <item>Old</item>
         <item>Unread desc</item>
@@ -18,7 +18,7 @@
         <item>Subscribers asc</item>
     </string-array>
 
-    <string-array name="dialog_pin_action_items">
+    <string-array name="dialog_pin_action">
         <item>Browse</item>
         <item>Copy URL</item>
         <item>Remove</item>
@@ -56,10 +56,20 @@
         <item>17</item>
     </string-array>
 
-    <string-array name="dialog_litem_list_move">
+    <string-array name="dialog_item_list_move">
         <item>Last read</item>
         <item>New unread</item>
         <item>Old unread</item>
+    </string-array>
+
+    <string-array name="dialog_item_list_remove_items">
+        <item>All in this feed</item>
+        <item>Reads in this feed</item>
+    </string-array>
+
+    <string-array name="dialog_sub_list_remove_items">
+        <item>All</item>
+        <item>Reads</item>
     </string-array>
 
 </resources>

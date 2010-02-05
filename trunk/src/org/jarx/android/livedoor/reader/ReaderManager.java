@@ -51,15 +51,11 @@ public class ReaderManager {
         }
 
         final boolean unreadOnly = ReaderPreferences.isSyncUnreadOnly(this.context);
-        Log.d(TAG, "sync " + (unreadOnly ? "unread only": "all"));
+        String debugPrefix = "sync " + (unreadOnly ? "unread only": "all");
+        Log.d(TAG, debugPrefix + " started.");
+
         SubsHandler subsHandler = new SubsHandler();
         syncSubs(unreadOnly, subsHandler);
-
-        try {
-            Thread.sleep(100);
-        } catch (InterruptedException e) {
-            return 0;
-        }
 
         ReaderException firstError = null;
         int syncCount = 0;
@@ -99,6 +95,7 @@ public class ReaderManager {
             }
         }
 
+        Log.d(TAG, debugPrefix + " finished.");
         return syncCount;
     }
 
@@ -137,9 +134,11 @@ public class ReaderManager {
         ContentResolver cr = this.context.getContentResolver();
         Cursor cursor = cr.query(subUri, null, null, null, null);
         if (!cursor.moveToFirst()) {
+            cursor.close();
             return 0;
         }
         Subscription sub = new Subscription.FilterCursor(cursor).getSubscription();
+        cursor.close();
         return syncItems(sub, subUri, unreadOnly);
     }
 
@@ -148,16 +147,13 @@ public class ReaderManager {
         if (!isLogined()) {
             login();
         }
-
         long subId = sub.getId();
         long subModifiedTime = sub.getModifiedTime();
         if (subUri == null) {
             subUri = ContentUris.withAppendedId(Subscription.CONTENT_URI, subId);
         }
-
         int syncCount = 0;
-        ContentResolver cr = this.context.getContentResolver();
-        ItemsHandler itemsHandler = new ItemsHandler(subId);
+        ItemsHandler itemsHandler = new ItemsHandler(subId, sub.getLastItemId());
         try {
             try {
                 this.client.handleUnread(subId, itemsHandler);
@@ -165,20 +161,15 @@ public class ReaderManager {
             } catch (IOException e) {
                 // NOTE: ignore. if no unread item, server http status 500
             }
-
             if (syncCount == 0 && !unreadOnly) {
-                do {
-                    itemsHandler.unread = false;
-                    this.client.handleAll(subId, syncCount, API_ALL_LIMIT, itemsHandler);
-                    if (itemsHandler.nomore || itemsHandler.counter < API_ALL_LIMIT) {
-                        break;
-                    }
-                    syncCount += itemsHandler.counter;
-                } while (false);
+                itemsHandler.unread = false;
+                this.client.handleAll(subId, syncCount, API_ALL_LIMIT, itemsHandler);
+                syncCount += itemsHandler.counter;
             }
 
             String where = Item._SUBSCRIPTION_ID + " = " + subId
                 + " and " + Item._UNREAD + " = 1";
+            ContentResolver cr = this.context.getContentResolver();
             Cursor cursor = cr.query(Item.CONTENT_URI, Item.SELECT_COUNT,
                 where, null, null);
             cursor.moveToNext();
@@ -188,6 +179,9 @@ public class ReaderManager {
             ContentValues subValues = new ContentValues();
             subValues.put(Subscription._ITEM_SYNC_TIME, subModifiedTime);
             subValues.put(Subscription._UNREAD_COUNT, unreadCount);
+            if (itemsHandler.lastItemId > 0) {
+                subValues.put(Subscription._LAST_ITEM_ID, itemsHandler.lastItemId);
+            }
             cr.update(subUri, subValues, null, null);
         } catch (ParseException e) {
             throw new ReaderException("json parse error", e);
@@ -201,33 +195,38 @@ public class ReaderManager {
         }
 
         ContentResolver cr = this.context.getContentResolver();
-
-        String where = Pin._ACTION + " > " + Pin.ACTION_NONE;
-        String order = Pin._ID + " asc";
-        Pin.FilterCursor cursor = new Pin.FilterCursor(
-            cr.query(Pin.CONTENT_URI, null, where, null, null));
+        cr.query(ReaderProvider.URI_TXN_BEGIN, null, null, null, null);
         try {
-            while (cursor.moveToNext()) {
-                Pin pin = cursor.getPin();
-                if (pin.getAction() == Pin.ACTION_ADD) {
-                    pinAdd(pin.getUri(), pin.getTitle(), false);
-                } else {
-                    pinRemove(pin.getUri(), false);
+            String where = Pin._ACTION + " > " + Pin.ACTION_NONE;
+            String order = Pin._ID + " asc";
+            Pin.FilterCursor cursor = new Pin.FilterCursor(
+                cr.query(Pin.CONTENT_URI, null, where, null, null));
+            try {
+                while (cursor.moveToNext()) {
+                    Pin pin = cursor.getPin();
+                    if (pin.getAction() == Pin.ACTION_ADD) {
+                        pinAdd(pin.getUri(), pin.getTitle(), false);
+                    } else {
+                        pinRemove(pin.getUri(), false);
+                    }
+                    Uri uri = ContentUris.withAppendedId(Pin.CONTENT_URI, pin.getId());
+                    cr.delete(uri, null, null);
                 }
-                Uri uri = ContentUris.withAppendedId(Pin.CONTENT_URI, pin.getId());
-                cr.delete(uri, null, null);
+            } finally {
+                cursor.close();
             }
-        } finally {
-            cursor.close();
-        }
 
-        PinsHandler pinsHandler = new PinsHandler();
-        try {
-            this.client.handlePinAll(pinsHandler);
-        } catch (ParseException e) {
-            throw new ReaderException("json parse error", e);
+            PinsHandler pinsHandler = new PinsHandler();
+            try {
+                this.client.handlePinAll(pinsHandler);
+            } catch (ParseException e) {
+                throw new ReaderException("json parse error", e);
+            }
+            cr.query(ReaderProvider.URI_TXN_SUCCESS, null, null, null, null);
+            return pinsHandler.counter;
+        } finally {
+            cr.query(ReaderProvider.URI_TXN_END, null, null, null, null);
         }
-        return pinsHandler.counter;
     }
 
     public boolean isConnected() {
@@ -420,6 +419,8 @@ public class ReaderManager {
                     }
                     this.values.put(Subscription._UNREAD_COUNT, this.unreadCount);
                     this.cr.insert(Subscription.CONTENT_URI, this.values);
+                    ReaderManager.this.context.sendBroadcast(
+                        new Intent(ReaderService.ACTION_SYNC_SUBS_FINISHED));
                 }
                 this.ids.add(id);
                 this.values = null;
@@ -476,16 +477,20 @@ public class ReaderManager {
 
     private class ItemsHandler extends ContentHandlerAdapter {
 
+        private static final int COMMIT_LIMIT = 20;
+        private final long subId;
+        private final long subLastItemId;
         private ContentResolver cr;
-        private long subscriptionId;
         private ContentValues values;
         private boolean startItems;
         private int counter;
         private boolean nomore;
         private boolean unread = true;
+        private long lastItemId;
 
-        private ItemsHandler(long subscriptionId) {
-            this.subscriptionId = subscriptionId;
+        private ItemsHandler(long subId, long lastItemId) {
+            this.subId = subId;
+            this.subLastItemId = lastItemId;
         }
 
         public void startJSON() throws ParseException, IOException {
@@ -496,7 +501,7 @@ public class ReaderManager {
         public boolean startObject() throws ParseException, IOException {
             if (this.startItems) {
                 this.values = new ContentValues();
-                this.values.put(Item._SUBSCRIPTION_ID, this.subscriptionId);
+                this.values.put(Item._SUBSCRIPTION_ID, this.subId);
                 this.counter++;
             }
             return true;
@@ -505,6 +510,10 @@ public class ReaderManager {
         public boolean endObject() throws ParseException, IOException {
             if (this.startItems) {
                 long id = this.values.getAsLong(Item._ID);
+                if (id <= this.subLastItemId) {
+                    this.nomore = true;
+                    return false;
+                }
                 Uri uri = ContentUris.withAppendedId(Item.CONTENT_URI, id);
                 Cursor cursor = this.cr.query(uri, null, null, null, null);
                 this.nomore = (cursor.getCount() > 0);
@@ -512,10 +521,12 @@ public class ReaderManager {
                 if (this.nomore) {
                     return false;
                 }
+
                 this.values.put(Item._UNREAD, (this.unread ? 1: 0));
                 this.cr.insert(Item.CONTENT_URI, this.values);
-                // Log.d(TAG, "insert item " + this.values.get(Item._URI));
                 this.values = null;
+
+                this.lastItemId = Math.max(this.lastItemId, id);
             }
             return true;
         }
@@ -584,7 +595,8 @@ public class ReaderManager {
             return true;
         }
 
-        public boolean primitive(Object value) throws ParseException, IOException {
+        public boolean primitive(Object value)
+                throws ParseException, IOException {
             if (this.key == null || this.values == null) {
                 return true;
             } else if (this.key.equals("link")) {
@@ -598,7 +610,8 @@ public class ReaderManager {
         }
     }
 
-    private static abstract class ContentHandlerAdapter implements ContentHandler {
+    private static abstract class ContentHandlerAdapter
+            implements ContentHandler {
 
         protected String key;
 

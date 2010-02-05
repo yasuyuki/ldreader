@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string-array name="dialog_subs_view_items">
+    <string-array name="dialog_sub_list_view">
         <item>フラット</item>
         <item>フォルダ</item>
         <item>レート</item>
     </string-array>
 
-    <string-array name="dialog_subs_sort_items">
+    <string-array name="dialog_sub_list_sort">
         <item>新着順</item>
         <item>旧着順</item>
         <item>未読が多い</item>
@@ -18,7 +18,7 @@
         <item>読者が少ない</item>
     </string-array>
 
-    <string-array name="dialog_pin_action_items">
+    <string-array name="dialog_pin_action">
         <item>ブラウザで閲覧</item>
         <item>URL をコピー</item>
         <item>削除</item>
@@ -41,10 +41,20 @@
         <item>最大</item>
     </string-array>
 
-    <string-array name="dialog_litem_list_move">
+    <string-array name="dialog_item_list_move">
         <item>最後に読んだ記事</item>
         <item>最新の未読記事</item>
         <item>古い未読記事</item>
+    </string-array>
+
+    <string-array name="dialog_item_list_remove_items">
+        <item>フィード内の全記事</item>
+        <item>フィード内の既読記事</item>
+    </string-array>
+
+    <string-array name="dialog_sub_list_remove_items">
+        <item>全記事</item>
+        <item>既読記事</item>
     </string-array>
 
 </resources>
