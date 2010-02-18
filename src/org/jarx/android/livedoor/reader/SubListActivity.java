@@ -1,6 +1,5 @@
 package org.jarx.android.livedoor.reader;
 
-import java.io.IOException;
 import android.app.Activity; 
 import android.app.Dialog;
 import android.app.ListActivity;
@@ -66,8 +65,11 @@ public class SubListActivity extends ListActivity
 
         bindService(new Intent(this, ReaderService.class),
             this.serviceConn, Context.BIND_AUTO_CREATE);
-        registerReceiver(this.refreshReceiver,
-            new IntentFilter(ReaderService.ACTION_SYNC_SUBS_FINISHED));
+
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(ReaderService.ACTION_SYNC_SUBS_FINISHED);
+        filter.addAction(ReaderService.ACTION_UNREAD_MODIFIED);
+        registerReceiver(this.refreshReceiver, filter);
 
         ActivityHelper.bindTitle(this);
         initListAdapter();
@@ -93,9 +95,6 @@ public class SubListActivity extends ListActivity
         super.onDestroy();
         unbindService(this.serviceConn);
         unregisterReceiver(this.refreshReceiver);
-        if (this.subsAdapter != null ) {
-            this.subsAdapter.closeCursor();
-        }
     }
 
     @Override
@@ -138,8 +137,7 @@ public class SubListActivity extends ListActivity
         Long subId = (Long) v.getTag();
         if (subId != null) {
             this.lastPosition = position;
-            startActivity(new Intent(this, ItemListActivity.class)
-                .putExtra(ActivityHelper.EXTRA_SUB_ID, subId));
+            SubListActivityHelper.startItemActivities(this, subId);
         }
     }
 
@@ -155,7 +153,6 @@ public class SubListActivity extends ListActivity
     @Override
     public synchronized void initListAdapter() {
         this.lastPosition = 0;
-
         Context context = getApplicationContext();
         StringBuilder where = new StringBuilder(64);
         where.append(Subscription._DISABLED).append(" = 0");

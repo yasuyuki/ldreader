@@ -28,21 +28,19 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.Window;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.ImageView;
 import android.widget.ListView;
-import android.widget.RatingBar;
 import android.widget.ResourceCursorAdapter;
 import android.widget.TextView;
-import android.widget.Toast;
 
-public class ItemListActivity extends ListActivity {
+public class ItemListActivity extends ListActivity
+        implements ItemActivityHelper.Itemable {
 
     private static final String TAG = "ItemListActivity";
-    private static final int DIALOG_MOVE = 1;
-    private static final int DIALOG_REMOVE = 2;
-    private static final int REQ_ITEM_ID = 1;
+    private static final int DIALOG_MOVE = 3;
+    private static final int REQUEST_ITEM_ID = 1;
+    private static final int REQUEST_PREFERENCES = 1;
 
     private final Handler handler = new Handler();
     private Uri subUri;
@@ -64,7 +62,7 @@ public class ItemListActivity extends ListActivity {
             ItemsAdapter a = ItemListActivity.this.itemsAdapter;
             if (s != null && s.getLastItemId() == 0
                     && a != null && a.getCount() == 0) {
-                ItemListActivity.this.progressSyncItems();
+                ItemActivityHelper.progressSyncItems(ItemListActivity.this, false);
             }
         }
         @Override
@@ -157,11 +155,13 @@ public class ItemListActivity extends ListActivity {
     @Override
     protected Dialog onCreateDialog(int id) {
         switch (id) {
+        case ItemActivityHelper.DIALOG_RELOAD:
+            return ItemActivityHelper.createDialogReload(this);
         case DIALOG_MOVE:
             return new AlertDialog.Builder(this)
                 .setIcon(R.drawable.alert_dialog_icon)
-                .setTitle(R.string.dialog_item_list_move_title)
-                .setSingleChoiceItems(R.array.dialog_item_list_move, 0,
+                .setTitle(R.string.dialog_items_move_title)
+                .setSingleChoiceItems(R.array.dialog_items_move, 0,
                     new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int i) {
                             switch (i) {
@@ -179,17 +179,8 @@ public class ItemListActivity extends ListActivity {
                         }
                     }
                 ).create();
-        case DIALOG_REMOVE:
-            return new AlertDialog.Builder(this)
-                .setTitle(R.string.dialog_item_list_remove)
-                .setSingleChoiceItems(R.array.dialog_item_list_remove_items, 0,
-                    new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialog, int i) {
-                            progressRemoveItems(i == 0);
-                            dialog.dismiss();
-                        }
-                    }
-                ).create();
+        case ItemActivityHelper.DIALOG_REMOVE:
+            return ItemActivityHelper.createDialogRemove(this);
         }
         return null;
     }
@@ -205,10 +196,10 @@ public class ItemListActivity extends ListActivity {
     public boolean onOptionsItemSelected(MenuItem menuItem) {
         switch (menuItem.getItemId()) {
         case R.id.menu_item_reload:
-            progressSyncItems();
+            showDialog(ItemActivityHelper.DIALOG_RELOAD);
             return true;
         case R.id.menu_item_touch_feed_local:
-            progressTouchFeedLocal();
+            ItemActivityHelper.progressTouchFeedLocal(this);
             return true;
         case R.id.menu_item_move:
             showDialog(DIALOG_MOVE);
@@ -220,10 +211,11 @@ public class ItemListActivity extends ListActivity {
             toggleSearchBar();
             return true;
         case R.id.menu_remove:
-            showDialog(DIALOG_REMOVE);
+            showDialog(ItemActivityHelper.DIALOG_REMOVE);
             return true;
         case R.id.menu_item_setting:
-            startActivity(new Intent(this, ReaderPreferenceActivity.class));
+            startActivityForResult(new Intent(this, ReaderPreferenceActivity.class),
+                REQUEST_PREFERENCES);
             return true;
         }
         return false;
@@ -231,11 +223,15 @@ public class ItemListActivity extends ListActivity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == REQ_ITEM_ID && data != null) {
+        if (requestCode == REQUEST_ITEM_ID && data != null) {
             this.lastItemId = data.getLongExtra(ActivityHelper.EXTRA_ITEM_ID, 0);
             bindSubTitleView(true);
             initListAdapter();
             moveToItemId(this.lastItemId);
+        } else if (requestCode == REQUEST_PREFERENCES) {
+            if (ReaderPreferences.isOmitItemList(this)) {
+                finish();
+            }
         }
     }
 
@@ -248,7 +244,7 @@ public class ItemListActivity extends ListActivity {
                 .putExtra(ActivityHelper.EXTRA_SUB_ID, this.sub.getId())
                 .putExtra(ActivityHelper.EXTRA_ITEM_ID, itemId)
                 .putExtra(ActivityHelper.EXTRA_WHERE, createBaseWhere());
-            startActivityForResult(intent, REQ_ITEM_ID);
+            startActivityForResult(intent, REQUEST_ITEM_ID);
         }
     }
 
@@ -329,6 +325,37 @@ public class ItemListActivity extends ListActivity {
         return new ActivityHelper.Where(buff, args);
     }
 
+    @Override
+    public Activity getActivity() {
+        return this;
+    }
+
+    @Override
+    public Handler getHandler() {
+        return this.handler;
+    }
+
+    @Override
+    public ReaderManager getReaderManager() {
+        return this.readerManager;
+    }
+
+    @Override
+    public long getSubId() {
+        return this.sub.getId();
+    }
+
+    @Override
+    public Uri getSubUri() {
+        return this.subUri;
+    }
+
+    @Override
+    public void initItems() {
+        bindSubTitleView(true);
+        initListAdapter();
+    }
+
     private void initListAdapter() {
         ActivityHelper.Where where = createBaseWhere();
         String orderby = Item._ID + " desc";
@@ -400,69 +427,6 @@ public class ItemListActivity extends ListActivity {
         cursor.moveToPosition(pos);
     }
 
-    private void progressRemoveItems(final boolean all) {
-        final long subId = this.sub.getId();
-        final ProgressDialog dialog = new ProgressDialog(this);
-        dialog.setIndeterminate(true);
-        dialog.setMessage(getText(R.string.msg_remove_running));
-        dialog.show();
-        new Thread() {
-            public void run() {
-                StringBuilder where = new StringBuilder(64);
-                where.append(Item._SUBSCRIPTION_ID).append(" = ").append(subId);
-                if (!all) {
-                    where.append(" and ");
-                    where.append(Item._UNREAD).append(" = 0");
-                }
-                ContentResolver cr = getContentResolver();
-                cr.delete(Item.CONTENT_URI, new String(where), null);
-                if (all) {
-                    ContentValues values = new ContentValues();
-                    values.put(Subscription._UNREAD_COUNT, 0);
-                    cr.update(ItemListActivity.this.subUri, values, null, null);
-                }
-                handler.post(new Runnable() {
-                    public void run() {
-                        showToast(getText(R.string.msg_remove_finished));
-                        if (all) {
-                            sendBroadcast(new Intent(
-                                ReaderService.ACTION_UNREAD_MODIFIED));
-                            bindSubTitleView(true);
-                        }
-                        initListAdapter();
-                        dialog.dismiss();
-                    }
-                });
-            }
-        }.start();
-    }
-
-    private void progressSyncItems() {
-        final long subId = this.sub.getId();
-        final ProgressDialog dialog = new ProgressDialog(this);
-        dialog.setIndeterminate(true);
-        dialog.setMessage(getText(R.string.msg_sync_running));
-        dialog.show();
-        new Thread() {
-            public void run() {
-                ReaderManager rm = ItemListActivity.this.readerManager;
-                try {
-                    rm.syncItems(subId, false);
-                } catch (IOException e) {
-                    showToast(e);
-                } catch (Throwable e) {
-                    showToast(e);
-                }
-                handler.post(new Runnable() {
-                    public void run() {
-                        initListAdapter();
-                        dialog.dismiss();
-                    }
-                });
-            }
-        }.start();
-    }
-
     private void progressTouchFeedLocal() {
         final ProgressDialog dialog = new ProgressDialog(this);
         dialog.setIndeterminate(true);
@@ -488,31 +452,13 @@ public class ItemListActivity extends ListActivity {
                 handler.post(new Runnable() {
                     public void run() {
                         initListAdapter();
-                        showToast(getText(R.string.msg_touch_feed_local));
+                        ActivityHelper.showToast(getApplicationContext(),
+                            getText(R.string.msg_touch_feed_local));
                         dialog.dismiss();
                     }
                 });
             }
         }.start();
-    }
-
-    private void showToast(IOException e) {
-        e.printStackTrace();
-        showToast(getText(R.string.err_io) + " (" + e.getLocalizedMessage() + ")");
-    }
-
-    private void showToast(Throwable e) {
-        e.printStackTrace();
-        showToast(e.getLocalizedMessage());
-    }
-
-    private void showToast(final CharSequence text) {
-        this.handler.post(new Runnable() {
-            public void run() {
-                Toast.makeText(getApplicationContext(),
-                    text, Toast.LENGTH_SHORT).show();
-            }
-        });
     }
 
     private class ItemsAdapter extends ResourceCursorAdapter {

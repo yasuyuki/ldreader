@@ -108,6 +108,20 @@ public class SubListActivityHelper extends ActivityHelper {
         }
     }
 
+    static void startItemActivities(Activity activity, long subId) {
+        if (ReaderPreferences.isOmitItemList(activity)) {
+            StringBuilder buff = new StringBuilder(128);
+            buff.append(Item._SUBSCRIPTION_ID).append(" = ").append(subId);
+            Intent intent = new Intent(activity, ItemActivity.class)
+                .putExtra(ActivityHelper.EXTRA_SUB_ID, subId)
+                .putExtra(ActivityHelper.EXTRA_WHERE, new Where(buff, null));
+            activity.startActivity(intent);
+        } else {
+            activity.startActivity(new Intent(activity, ItemListActivity.class)
+                .putExtra(ActivityHelper.EXTRA_SUB_ID, subId));
+        }
+    }
+
     static void touchAllLocal(final SubListable listable) {
         final Activity activity = listable.getActivity();
         final ProgressDialog dialog = new ProgressDialog(activity);

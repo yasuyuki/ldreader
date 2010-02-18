@@ -202,6 +202,13 @@ public class ReaderProvider extends ContentProvider {
         String groupBy = null;
         String having = null;
         String limit = null;
+        if (sortOrder != null) {
+            int limitOff = sortOrder.indexOf(" limit ");
+            if (limitOff != -1) {
+                limit = sortOrder.substring(limitOff + " limit ".length());
+                sortOrder = sortOrder.substring(0, limitOff);
+            }
+        }
         switch (uriMatcher.match(uri)) {
         case UM_BEGIN_TXN:
             db.beginTransaction();
@@ -227,9 +234,6 @@ public class ReaderProvider extends ContentProvider {
             qb.setTables(Subscription.TABLE_NAME);
             break;
         case UM_SUBS_FOLDER:
-            if (projection == null) {
-                projection = Subscription.DEFAULT_SELECT;
-            }
             qb.setTables(Subscription.TABLE_NAME);
             if (projection == null) {
                 projection = new String[]{
@@ -242,9 +246,6 @@ public class ReaderProvider extends ContentProvider {
             groupBy = Subscription._FOLDER;
             break;
         case UM_SUBS_RATE:
-            if (projection == null) {
-                projection = Subscription.DEFAULT_SELECT;
-            }
             qb.setTables(Subscription.TABLE_NAME);
             if (projection == null) {
                 projection = new String[]{

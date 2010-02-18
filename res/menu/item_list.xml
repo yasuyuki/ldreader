@@ -27,12 +27,12 @@
         android:icon="@android:drawable/ic_menu_search" />
 
     <item android:id="@+id/menu_remove"
-        android:orderInCategory="8"
+        android:orderInCategory="98"
         android:title="Remove Items"
         android:icon="@android:drawable/ic_menu_delete" />
 
     <item android:id="@+id/menu_item_setting"
-        android:orderInCategory="9"
+        android:orderInCategory="99"
         android:title="Settings"
         android:icon="@android:drawable/ic_menu_preferences" />
 
