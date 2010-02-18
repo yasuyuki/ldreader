@@ -1,6 +1,5 @@
 package org.jarx.android.livedoor.reader;
 
-import java.io.IOException;
 import android.app.Activity; 
 import android.app.Dialog;
 import android.app.ExpandableListActivity;
@@ -71,8 +70,11 @@ public class GroupSubListActivity extends ExpandableListActivity
 
         bindService(new Intent(this, ReaderService.class),
             this.serviceConn, Context.BIND_AUTO_CREATE);
-        registerReceiver(this.refreshReceiver,
-            new IntentFilter(ReaderService.ACTION_SYNC_SUBS_FINISHED));
+
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(ReaderService.ACTION_SYNC_SUBS_FINISHED);
+        filter.addAction(ReaderService.ACTION_UNREAD_MODIFIED);
+        registerReceiver(this.refreshReceiver, filter);
 
         ActivityHelper.bindTitle(this);
         initListAdapter();
@@ -152,8 +154,7 @@ public class GroupSubListActivity extends ExpandableListActivity
         if (subId != null) {
             this.lastGroupPosition = groupPosition;
             this.lastChildPosition = childPosition;
-            startActivity(new Intent(this, ItemListActivity.class)
-                .putExtra(ActivityHelper.EXTRA_SUB_ID, subId));
+            SubListActivityHelper.startItemActivities(this, subId);
         }
         return true;
     }

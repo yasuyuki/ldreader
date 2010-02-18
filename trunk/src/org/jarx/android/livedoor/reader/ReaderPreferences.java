@@ -17,6 +17,7 @@ public class ReaderPreferences {
     public static final String KEY_DISABLE_ITEM_LINKS = "disable_item_links";
     public static final String KEY_SHOW_ITEM_CONTROLLS = "show_item_controlls";
     public static final String KEY_ITEM_BODY_FONT_SIZE = "item_body_font_size";
+    public static final String KEY_OMIT_ITEM_LIST = "omit_item_list";
 
     public static final int SUBS_VIEW_FLAT = 1;
     public static final int SUBS_VIEW_FOLDER = 2;
@@ -122,6 +123,10 @@ public class ReaderPreferences {
 
     public static boolean isShowItemControlls(Context c) {
         return getBoolean(c, KEY_SHOW_ITEM_CONTROLLS, true);
+    }
+
+    public static boolean isOmitItemList(Context c) {
+        return getBoolean(c, KEY_OMIT_ITEM_LIST, false);
     }
 
     public static int getItemBodyFontSize(Context c) {

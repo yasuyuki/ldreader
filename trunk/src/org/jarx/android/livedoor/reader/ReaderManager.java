@@ -31,6 +31,9 @@ import static org.jarx.android.livedoor.reader.Utils.*;
 public class ReaderManager {
 
     public static final int API_ALL_LIMIT = 100;
+    public static final int ITEM_SYNC_UNREAD_ONLY = 0;
+    public static final int ITEM_SYNC_WITH_READ_IF_NO_UNREAD = 1;
+    public static final int ITEM_SYNC_WITH_READ = 2;
 
     private static final String TAG = "ReaderManager";
 
@@ -130,6 +133,13 @@ public class ReaderManager {
 
     public int syncItems(long subId, boolean unreadOnly)
             throws IOException, ReaderException {
+        int syncType = (unreadOnly)
+            ? ITEM_SYNC_UNREAD_ONLY: ITEM_SYNC_WITH_READ_IF_NO_UNREAD;
+        return syncItems(subId, syncType);
+    }
+
+    public int syncItems(long subId, int syncType)
+            throws IOException, ReaderException {
         Uri subUri = ContentUris.withAppendedId(Subscription.CONTENT_URI, subId);
         ContentResolver cr = this.context.getContentResolver();
         Cursor cursor = cr.query(subUri, null, null, null, null);
@@ -139,10 +149,17 @@ public class ReaderManager {
         }
         Subscription sub = new Subscription.FilterCursor(cursor).getSubscription();
         cursor.close();
-        return syncItems(sub, subUri, unreadOnly);
+        return syncItems(sub, subUri, syncType);
     }
 
     public int syncItems(Subscription sub, Uri subUri, boolean unreadOnly)
+            throws IOException, ReaderException {
+        int syncType = (unreadOnly)
+            ? ITEM_SYNC_UNREAD_ONLY: ITEM_SYNC_WITH_READ_IF_NO_UNREAD;
+        return syncItems(sub, subUri, syncType);
+    }
+
+    public int syncItems(Subscription sub, Uri subUri, int syncType)
             throws IOException, ReaderException {
         if (!isLogined()) {
             login();
@@ -161,8 +178,10 @@ public class ReaderManager {
             } catch (IOException e) {
                 // NOTE: ignore. if no unread item, server http status 500
             }
-            if (syncCount == 0 && !unreadOnly) {
+            if (syncType == ITEM_SYNC_WITH_READ
+                    || (syncCount == 0 && syncType == ITEM_SYNC_WITH_READ_IF_NO_UNREAD)) {
                 itemsHandler.unread = false;
+                itemsHandler.continueIfExists = (syncType == ITEM_SYNC_WITH_READ);
                 this.client.handleAll(subId, syncCount, API_ALL_LIMIT, itemsHandler);
                 syncCount += itemsHandler.counter;
             }
@@ -477,15 +496,14 @@ public class ReaderManager {
 
     private class ItemsHandler extends ContentHandlerAdapter {
 
-        private static final int COMMIT_LIMIT = 20;
         private final long subId;
         private final long subLastItemId;
         private ContentResolver cr;
         private ContentValues values;
         private boolean startItems;
         private int counter;
-        private boolean nomore;
         private boolean unread = true;
+        private boolean continueIfExists;
         private long lastItemId;
 
         private ItemsHandler(long subId, long lastItemId) {
@@ -510,16 +528,15 @@ public class ReaderManager {
         public boolean endObject() throws ParseException, IOException {
             if (this.startItems) {
                 long id = this.values.getAsLong(Item._ID);
-                if (id <= this.subLastItemId) {
-                    this.nomore = true;
-                    return false;
+                if (!continueIfExists && id <= this.subLastItemId) {
+                    return continueIfExists;
                 }
                 Uri uri = ContentUris.withAppendedId(Item.CONTENT_URI, id);
                 Cursor cursor = this.cr.query(uri, null, null, null, null);
-                this.nomore = (cursor.getCount() > 0);
+                boolean exists = (cursor.getCount() > 0);
                 cursor.close();
-                if (this.nomore) {
-                    return false;
+                if (exists) {
+                    return continueIfExists;
                 }
 
                 this.values.put(Item._UNREAD, (this.unread ? 1: 0));

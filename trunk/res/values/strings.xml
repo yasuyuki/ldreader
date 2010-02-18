@@ -50,8 +50,9 @@
     <string name="dialog_sub_list_view_title">Select view type</string>
     <string name="dialog_sub_list_sort_title">Select sort type</string>
     <string name="dialog_sub_list_remove_items">Remove items</string>
-    <string name="dialog_item_list_move_title">Move to</string>
-    <string name="dialog_item_list_remove">Remove items</string>
+    <string name="dialog_items_reload_title">Reload items</string>
+    <string name="dialog_items_move_title">Move to</string>
+    <string name="dialog_items_remove_title">Remove Items</string>
 
     <string name="preference_category_account">Account</string>
     <string name="preference_login_title">Login settings</string>
@@ -71,6 +72,8 @@
     <string name="preference_view_disable_item_links_summary">Disable raunch browser if link clicked.</string>
     <string name="preference_view_show_item_controlls_title">Show item controlls</string>
     <string name="preference_view_show_item_controlls_summary">Don't hide item controlls.</string>
+    <string name="preference_view_omit_item_list">Omit item list</string>
+    <string name="preference_view_omit_item_list_summary"></string>
     <string name="preference_view_item_body_font_size_title">Item view font size</string>
 
     <string name="preference_category_info">Information</string>

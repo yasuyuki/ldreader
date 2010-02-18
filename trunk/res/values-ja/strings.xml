@@ -21,7 +21,7 @@
     <string name="msg_pin_add_running">ピンを追加しています</string>
     <string name="msg_pin_remove_running">ピンを削除しています</string>
     <string name="msg_no_subscription">表示できるフィードはありません</string>
-    <string name="msg_no_item_for_title">（記事はありません）</string>
+    <string name="msg_no_item_for_title">（表示できる記事はありません）</string>
     <string name="msg_no_item">表示できる記事はありません</string>
     <string name="msg_no_pin">ピンはありません</string>
     <string name="msg_touch_running">既読処理を実行中です</string>
@@ -50,8 +50,9 @@
     <string name="dialog_sub_list_view_title">表示形式の選択</string>
     <string name="dialog_sub_list_sort_title">並び替え</string>
     <string name="dialog_sub_list_remove_items">記事の削除</string>
-    <string name="dialog_item_list_move_title">記事に移動</string>
-    <string name="dialog_item_list_remove">記事の削除</string>
+    <string name="dialog_items_reload_title">記事の読み込み</string>
+    <string name="dialog_items_move_title">記事に移動</string>
+    <string name="dialog_items_remove_title">記事の削除</string>
 
     <string name="preference_category_account">アカウント</string>
     <string name="preference_login_title">ログイン情報を変更</string>
@@ -62,7 +63,7 @@
     <string name="preference_auto_touch_all_title">取り込み時の自動既読</string>
     <string name="preference_auto_touch_all_summary">取り込み時、フィード毎にサーバに既読を送信します</string>
     <string name="preference_sync_unread_only_title">未読のみを取り込む</string>
-    <string name="preference_sync_unread_only_summary">未読のみを取り込みます</string>
+    <string name="preference_sync_unread_only_summary">チェックを外すと未読が無い場合、既読を取り込みます</string>
 
     <string name="preference_category_view">表示設定</string>
     <string name="preference_view_unread_only_title">既読フィードを隠す</string>
@@ -71,6 +72,8 @@
     <string name="preference_view_disable_item_links_summary">記事中の URL をクリックしてもブラウザを起動しません</string>
     <string name="preference_view_show_item_controlls_title">記事コントロール表示</string>
     <string name="preference_view_show_item_controlls_summary">常に記事コントロールを表示します</string>
+    <string name="preference_view_omit_item_list">記事一覧画面を省略する</string>
+    <string name="preference_view_omit_item_list_summary">記事一覧画面を省略して詳細画面に遷移します</string>
     <string name="preference_view_item_body_font_size_title">記事の文字の大きさ</string>
 
     <string name="preference_category_info">情報</string>

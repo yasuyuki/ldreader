@@ -3,9 +3,9 @@ package org.jarx.android.livedoor.reader;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLongArray;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.ComponentName;
 import android.content.Context;
@@ -30,7 +30,6 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.Window;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.webkit.WebViewClient;
@@ -40,9 +39,9 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.Toast;
 
-public class ItemActivity extends Activity {
+public class ItemActivity extends Activity
+        implements ItemActivityHelper.Itemable {
 
     private static final String TAG = "ItemActivity";
 
@@ -59,6 +58,10 @@ public class ItemActivity extends Activity {
     private boolean pinOn;
     private ReaderService readerService;
     private ReaderManager readerManager;
+
+    // NOTE: for "omit_item_list" mode
+    private boolean omitItemList;
+    private boolean unreadOnly;
 
     private ServiceConnection serviceConn = new ServiceConnection() {
         @Override
@@ -95,14 +98,18 @@ public class ItemActivity extends Activity {
         setContentView(R.layout.item);
         ActivityHelper.bindTitle(this);
 
+        this.omitItemList = ReaderPreferences.isOmitItemList(this);
+        if (this.omitItemList) {
+            this.unreadOnly = true;
+        }
+
         long itemId = 0;
         if (savedState != null) {
             itemId = savedState.getLong("itemId", 0);
-            // NOTE: wrong code (for Xlint:unchecked)
-            Long[] ids = (Long[]) savedState.getSerializable("readItemIds");
+            long[] ids = savedState.getLongArray("readItemIds");
             if (ids != null) {
                 this.readItemIds = new HashSet<Long>(ids.length * 2);
-                for (Long id: ids) {
+                for (long id: ids) {
                     this.readItemIds.add(id);
                 }
             }
@@ -177,6 +184,17 @@ public class ItemActivity extends Activity {
     }
 
     @Override
+    protected Dialog onCreateDialog(int id) {
+        switch (id) {
+        case ItemActivityHelper.DIALOG_RELOAD:
+            return ItemActivityHelper.createDialogReload(this);
+        case ItemActivityHelper.DIALOG_REMOVE:
+            return ItemActivityHelper.createDialogRemove(this);
+        }
+        return null;
+    }
+
+    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.item, menu);
@@ -186,11 +204,20 @@ public class ItemActivity extends Activity {
     @Override
     public boolean onOptionsItemSelected(MenuItem menuItem) {
         switch (menuItem.getItemId()) {
+        case R.id.menu_item_reload:
+            showDialog(ItemActivityHelper.DIALOG_RELOAD);
+            return true;
+        case R.id.menu_item_touch_feed_local:
+            ItemActivityHelper.progressTouchFeedLocal(this);
+            return true;
         case R.id.menu_item_pin:
             progressPin();
             return true;
         case R.id.menu_item_pin_list:
             startActivity(new Intent(this, PinActivity.class));
+            return true;
+        case R.id.menu_remove:
+            showDialog(ItemActivityHelper.DIALOG_REMOVE);
             return true;
         case R.id.menu_item_setting:
             startActivity(new Intent(this, ReaderPreferenceActivity.class));
@@ -212,21 +239,27 @@ public class ItemActivity extends Activity {
     public void onPause() {
         super.onPause();
         saveReadItemId();
-        destroyItems();
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
+        destroyItems();
         unbindService(this.serviceConn);
     }
 
     @Override
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        outState.putSerializable("readItemIds",
-            this.readItemIds.toArray(new Long[this.readItemIds.size()]));
-        outState.putLong("itemId", this.currentItem.getId());
+        long[] ids = new long[this.readItemIds.size()];
+        int i = 0;
+        for (long id: this.readItemIds) {
+            ids[i++] = id;
+        }
+        outState.putLongArray("readItemIds", ids);
+        if (this.currentItem != null) {
+            outState.putLong("itemId", this.currentItem.getId());
+        }
     }
 
     @Override
@@ -275,24 +308,38 @@ public class ItemActivity extends Activity {
         }.start();
     }
 
+    @Override
+    public Activity getActivity() {
+        return this;
+    }
+
+    @Override
+    public Handler getHandler() {
+        return this.handler;
+    }
+
+    @Override
+    public ReaderManager getReaderManager() {
+        return this.readerManager;
+    }
+
+    @Override
+    public long getSubId() {
+        return this.sub.getId();
+    }
+
+    @Override
+    public Uri getSubUri() {
+        return this.subUri;
+    }
+
+    @Override
+    public void initItems() {
+        initItems(0);
+    }
+
     private void initItems(long itemId) {
-        if (itemId == 0) {
-            itemId = this.sub.getReadItemId();
-        }
-        Uri itemUri = ContentUris.withAppendedId(Item.CONTENT_URI, itemId);
         ContentResolver cr = getContentResolver();
-        Cursor c = cr.query(itemUri, null, null, null, null);
-        if (c.moveToFirst()) {
-            this.currentItem = new Item.FilterCursor(c).getItem();
-        }
-        c.close();
-        if (this.currentItem == null) {
-            return;
-        }
-
-        setResult(RESULT_OK, new Intent()
-            .putExtra(ActivityHelper.EXTRA_ITEM_ID, itemId));
-
         StringBuilder where = new StringBuilder(this.baseWhere.buff);
         int baseLength = where.length();
         String[] whereArgs = null;
@@ -300,14 +347,66 @@ public class ItemActivity extends Activity {
             whereArgs = (String[]) this.baseWhere.args.clone();
         }
 
-        if (this.itemsCount == 0) {
-            where.setLength(baseLength);
-            c = cr.query(Item.CONTENT_URI, Item.SELECT_COUNT,
-                new String(where), whereArgs, null);
-            c.moveToFirst();
-            this.itemsCount = c.getInt(0);
+        if (itemId == 0 && !this.omitItemList) {
+            itemId = this.sub.getReadItemId();
+        }
+        if (itemId == 0) {
+            String unreadOnlyWhere = " and " + Item._UNREAD + " = 1";
+            int unreadOnlyWhereIndex = where.indexOf(unreadOnlyWhere);
+            if (this.unreadOnly && unreadOnlyWhereIndex == -1) {
+                where.append(unreadOnlyWhere);
+            }
+            String orderby = Item._ID + " desc limit 1";
+            Cursor c = cr.query(Item.CONTENT_URI, null, new String(where),
+                whereArgs, orderby);
+            if (c.moveToFirst()) {
+                this.currentItem = new Item.FilterCursor(c).getItem();
+                itemId = currentItem.getId();
+                this.baseWhere.buff.append(where.substring(baseLength));
+                baseLength = where.length();
+            } else {
+                c.close();
+                this.unreadOnly = false;
+                if (unreadOnlyWhereIndex != -1) {
+                    where.delete(unreadOnlyWhereIndex, unreadOnlyWhereIndex
+                        + unreadOnlyWhere.length());
+                    this.baseWhere.buff = new StringBuilder(where);
+                    baseLength = where.length();
+                } else {
+                    where.setLength(baseLength);
+                }
+                c = cr.query(Item.CONTENT_URI, null, new String(where),
+                    whereArgs, orderby);
+                if (c.moveToFirst()) {
+                    this.currentItem = new Item.FilterCursor(c).getItem();
+                    itemId = currentItem.getId();
+                }
+            }
+            c.close();
+        } else {
+            Uri itemUri = ContentUris.withAppendedId(Item.CONTENT_URI, itemId);
+            Cursor c = cr.query(itemUri, null, null, null, null);
+            if (c.moveToFirst()) {
+                this.currentItem = new Item.FilterCursor(c).getItem();
+            }
             c.close();
         }
+        if (this.currentItem == null) {
+            bindSubTitleView();
+            bindItemView(ReaderPreferences.isShowItemControlls(
+                getApplicationContext()));
+            return;
+        }
+
+        setResult(RESULT_OK, new Intent()
+            .putExtra(ActivityHelper.EXTRA_ITEM_ID, itemId));
+
+        where.setLength(baseLength);
+        Cursor c = cr.query(Item.CONTENT_URI, Item.SELECT_COUNT,
+            new String(where), whereArgs, null);
+        c.moveToFirst();
+        this.itemsCount = c.getInt(0);
+        c.close();
 
         where.setLength(baseLength);
         where.append(" and ");
@@ -390,8 +489,7 @@ public class ItemActivity extends Activity {
             subValues.put(Subscription._UNREAD_COUNT, unreadCount);
             cr.update(subUri, subValues, null, null);
 
-            getApplicationContext().sendBroadcast(
-                new Intent(ReaderService.ACTION_UNREAD_MODIFIED));
+            sendBroadcast(new Intent(ReaderService.ACTION_UNREAD_MODIFIED));
         }
     }
 
@@ -496,6 +594,14 @@ public class ItemActivity extends Activity {
         buff.append(this.sub.getTitle());
         if (this.itemsCount > 0) {
             buff.append(" [");
+            if (this.omitItemList) {
+                if (this.unreadOnly) {
+                    buff.append(getText(R.string.txt_unreads));
+                } else {
+                    buff.append(getText(R.string.txt_reads));
+                }
+                buff.append(":");
+            }
             buff.append(this.itemsIndex + 1);
             buff.append("/");
             buff.append(this.itemsCount);
@@ -581,25 +687,6 @@ public class ItemActivity extends Activity {
         buff.append(body);
         buff.append("</div>");
         return new String(buff);
-    }
-
-    private void showToast(IOException e) {
-        e.printStackTrace();
-        showToast(getText(R.string.err_io) + " (" + e.getLocalizedMessage() + ")");
-    }
-
-    private void showToast(Throwable e) {
-        e.printStackTrace();
-        showToast(e.getLocalizedMessage());
-    }
-
-    private void showToast(final CharSequence text) {
-        this.handler.post(new Runnable() {
-            public void run() {
-                Toast.makeText(getApplicationContext(),
-                    text, Toast.LENGTH_SHORT).show();
-            }
-        });
     }
 
     private class BodyWebViewTouchListener implements View.OnTouchListener {
