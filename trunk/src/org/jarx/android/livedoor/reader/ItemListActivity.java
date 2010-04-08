@@ -6,6 +6,7 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ListActivity;
 import android.app.ProgressDialog;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.ContentUris;
@@ -72,12 +73,24 @@ public class ItemListActivity extends ListActivity
         }
     };
 
+    private BroadcastReceiver refreshReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            ItemListActivity.this.initListAdapter();
+        }
+    };
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         bindService(new Intent(this, ReaderService.class), this.serviceConn,
             Context.BIND_AUTO_CREATE);
+
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(ReaderService.ACTION_SYNC_SUBS_FINISHED);
+        filter.addAction(ReaderService.ACTION_UNREAD_MODIFIED);
+        registerReceiver(this.refreshReceiver, filter);
 
         setContentView(R.layout.item_list);
         ActivityHelper.bindTitle(this);
@@ -130,10 +143,7 @@ public class ItemListActivity extends ListActivity
     public void onDestroy() {
         super.onDestroy();
         unbindService(this.serviceConn);
-        if (this.itemsAdapter != null) {
-            this.itemsAdapter.closeCursor();
-            this.itemsAdapter = null;
-        }
+        unregisterReceiver(this.refreshReceiver);
     }
 
     private void bindSubTitleView(boolean reloadSub) {

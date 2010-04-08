@@ -53,9 +53,16 @@ public class ReaderService extends Service {
         this.syncFinishedFormat = new MessageFormat(
             getText(R.string.msg_sync_finished).toString());
 
-        long interval = ReaderPreferences.getSyncInterval(getApplicationContext());
+        Context c = getApplicationContext();
+        long interval = ReaderPreferences.getSyncInterval(c);
         if (interval > 0) {
-            startSyncTimer(500, interval);
+            long delay = 0;
+            long lastSyncTime = ReaderPreferences.getLastSyncTime(c);
+            if (lastSyncTime > 0) {
+                long now = System.currentTimeMillis();
+                delay = Math.max((lastSyncTime + interval) - now, 0);
+            }
+            startSyncTimer(delay, interval);
         }
     }
 
@@ -125,6 +132,8 @@ public class ReaderService extends Service {
                 ReaderService.this.setSyncRunning(true);
                 try {
                     if (rm.login()) {
+                        ReaderPreferences.setLastSyncTime(
+                            context, System.currentTimeMillis());
                         ReaderService.this.notifySyncStarted();
                         int syncCount = rm.sync();
                         ReaderService.this.notifySyncFinished(syncCount);

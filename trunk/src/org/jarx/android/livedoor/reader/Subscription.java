@@ -277,7 +277,6 @@ public final class Subscription implements Serializable, BaseColumns {
 
     public static class FilterCursor extends CursorWrapper {
 
-        private final Cursor cursor;
         private final Subscription sub;
         private final int posId;
         private final int posUri;
@@ -298,41 +297,36 @@ public final class Subscription implements Serializable, BaseColumns {
 
         public FilterCursor(Cursor cursor, Subscription sub) {
             super(cursor);
-            this.cursor = cursor;
             this.sub = sub;
-            this.posId = cursor.getColumnIndex(Subscription._ID);
-            this.posUri = cursor.getColumnIndex(Subscription._URI);
-            this.posTitle = cursor.getColumnIndex(Subscription._TITLE);
-            this.posRate = cursor.getColumnIndex(Subscription._RATE);
-            this.posSubsCount = cursor.getColumnIndex(Subscription._SUBSCRIBERS_COUNT);
-            this.posUnreadCount = cursor.getColumnIndex(Subscription._UNREAD_COUNT);
-            this.posFolder = cursor.getColumnIndex(Subscription._FOLDER);
-            this.posModifiedTime = cursor.getColumnIndex(Subscription._MODIFIED_TIME);
-            this.posItemSyncTime = cursor.getColumnIndex(Subscription._ITEM_SYNC_TIME);
-            this.posDisabled = cursor.getColumnIndex(Subscription._DISABLED);
-            this.posReadItemId = cursor.getColumnIndex(Subscription._READ_ITEM_ID);
-            this.posLastItemId = cursor.getColumnIndex(Subscription._LAST_ITEM_ID);
+            this.posId = getColumnIndex(Subscription._ID);
+            this.posUri = getColumnIndex(Subscription._URI);
+            this.posTitle = getColumnIndex(Subscription._TITLE);
+            this.posRate = getColumnIndex(Subscription._RATE);
+            this.posSubsCount = getColumnIndex(Subscription._SUBSCRIBERS_COUNT);
+            this.posUnreadCount = getColumnIndex(Subscription._UNREAD_COUNT);
+            this.posFolder = getColumnIndex(Subscription._FOLDER);
+            this.posModifiedTime = getColumnIndex(Subscription._MODIFIED_TIME);
+            this.posItemSyncTime = getColumnIndex(Subscription._ITEM_SYNC_TIME);
+            this.posDisabled = getColumnIndex(Subscription._DISABLED);
+            this.posReadItemId = getColumnIndex(Subscription._READ_ITEM_ID);
+            this.posLastItemId = getColumnIndex(Subscription._LAST_ITEM_ID);
         }
 
         public Subscription getSubscription() {
             Subscription sub = (this.sub == null) ? new Subscription(): this.sub;
-            sub.setId(this.cursor.getLong(this.posId));
-            sub.setUri(this.cursor.getString(this.posUri));
-            sub.setTitle(this.cursor.getString(this.posTitle));
-            sub.setRate(this.cursor.getInt(this.posRate));
-            sub.setSubscribersCount(this.cursor.getInt(this.posSubsCount));
-            sub.setUnreadCount(this.cursor.getInt(this.posUnreadCount));
-            sub.setFolder(this.cursor.getString(this.posFolder));
-            sub.setModifiedTime(this.cursor.getLong(this.posModifiedTime));
-            sub.setItemSyncTime(this.cursor.getLong(this.posItemSyncTime));
-            sub.setDisabled(this.cursor.getInt(this.posDisabled) == 1);
-            sub.setReadItemId(this.cursor.getLong(this.posReadItemId));
-            sub.setLastItemId(this.cursor.getLong(this.posLastItemId));
+            sub.setId(getLong(this.posId));
+            sub.setUri(getString(this.posUri));
+            sub.setTitle(getString(this.posTitle));
+            sub.setRate(getInt(this.posRate));
+            sub.setSubscribersCount(getInt(this.posSubsCount));
+            sub.setUnreadCount(getInt(this.posUnreadCount));
+            sub.setFolder(getString(this.posFolder));
+            sub.setModifiedTime(getLong(this.posModifiedTime));
+            sub.setItemSyncTime(getLong(this.posItemSyncTime));
+            sub.setDisabled(getInt(this.posDisabled) == 1);
+            sub.setReadItemId(getLong(this.posReadItemId));
+            sub.setLastItemId(getLong(this.posLastItemId));
             return sub;
-        }
-
-        public Cursor getCursor() {
-            return this.cursor;
         }
     }
 }

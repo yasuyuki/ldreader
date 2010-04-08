@@ -15,9 +15,10 @@ public class Item implements Serializable, BaseColumns {
     public static final Uri CONTENT_URI
         = Uri.parse(ReaderProvider.ITEM_CONTENT_URI_NAME);
 
-    public static final String[] SELECT_COUNT = {"count(*)"};
-    public static final String[] SELECT_MAX_ID = {"max(" + _ID + ")", "count(*)"};
-    public static final String[] SELECT_MIN_ID = {"min(" + _ID + ")", "count(*)"};
+    public static final String[] SELECT_ID = {_ID};
+    public static final String[] SELECT_COUNT = {"count(" + _ID + ")"};
+    public static final String[] SELECT_MAX_ID = {"max(" + _ID + ")", "count(" + _ID + ")"};
+    public static final String[] SELECT_MIN_ID = {"min(" + _ID + ")", "count(" + _ID + ")"};
 
     public static final String _SUBSCRIPTION_ID = "subscription_id";
     public static final String _URI = "uri";
@@ -179,7 +180,6 @@ public class Item implements Serializable, BaseColumns {
 
     public static class FilterCursor extends CursorWrapper {
 
-        private final Cursor cursor;
         private final Item item;
         private final int posId;
         private final int posSubscriptionId;
@@ -197,39 +197,38 @@ public class Item implements Serializable, BaseColumns {
 
         public FilterCursor(Cursor cursor, Item item) {
             super(cursor);
-            this.cursor = cursor;
             this.item = item;
-            this.posId = cursor.getColumnIndex(Item._ID);
-            this.posSubscriptionId = cursor.getColumnIndex(Item._SUBSCRIPTION_ID);
-            this.posUri = cursor.getColumnIndex(Item._URI);
-            this.posTitle = cursor.getColumnIndex(Item._TITLE);
-            this.posBody = cursor.getColumnIndex(Item._BODY);
-            this.posAuthor = cursor.getColumnIndex(Item._AUTHOR);
-            this.posUnread = cursor.getColumnIndex(Item._UNREAD);
-            this.posCreatedTime = cursor.getColumnIndex(Item._CREATED_TIME);
-            this.posModifiedTime = cursor.getColumnIndex(Item._MODIFIED_TIME);
+            this.posId = getColumnIndex(Item._ID);
+            this.posSubscriptionId = getColumnIndex(Item._SUBSCRIPTION_ID);
+            this.posUri = getColumnIndex(Item._URI);
+            this.posTitle = getColumnIndex(Item._TITLE);
+            this.posBody = getColumnIndex(Item._BODY);
+            this.posAuthor = getColumnIndex(Item._AUTHOR);
+            this.posUnread = getColumnIndex(Item._UNREAD);
+            this.posCreatedTime = getColumnIndex(Item._CREATED_TIME);
+            this.posModifiedTime = getColumnIndex(Item._MODIFIED_TIME);
         }
 
         public Item getItem() {
             Item item = (this.item == null) ? new Item(): this.item;
-            item.setId(this.cursor.getLong(this.posId));
-            item.setSubscriptionId(this.cursor.getLong(this.posSubscriptionId));
-            item.setUri(this.cursor.getString(this.posUri));
-            item.setTitle(this.cursor.getString(this.posTitle));
-            item.setBody(this.cursor.getString(this.posBody));
-            item.setAuthor(this.cursor.getString(this.posAuthor));
-            item.setUnread(this.cursor.getInt(this.posUnread) == 1);
-            item.setCreatedTime(this.cursor.getLong(this.posCreatedTime));
-            item.setModifiedTime(this.cursor.getLong(this.posModifiedTime));
+            item.setId(getLong(this.posId));
+            item.setSubscriptionId(getLong(this.posSubscriptionId));
+            item.setUri(getString(this.posUri));
+            item.setTitle(getString(this.posTitle));
+            item.setBody(getString(this.posBody));
+            item.setAuthor(getString(this.posAuthor));
+            item.setUnread(getInt(this.posUnread) == 1);
+            item.setCreatedTime(getLong(this.posCreatedTime));
+            item.setModifiedTime(getLong(this.posModifiedTime));
             return item;
         }
 
-        public boolean isUnread() {
-            return (this.cursor.getInt(this.posUnread) == 1);
+        public long getId() {
+            return getLong(this.posId);
         }
 
-        public Cursor getCursor() {
-            return this.cursor;
+        public boolean isUnread() {
+            return (getInt(this.posUnread) == 1);
         }
     }
 }

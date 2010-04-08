@@ -49,10 +49,7 @@ public class ItemActivity extends Activity
     private Uri subUri;
     private ActivityHelper.Where baseWhere;
     private Item currentItem;
-    private int itemsCount;
-    private int itemsIndex;
-    private long nextItemId;
-    private long previousItemId;
+    private Item.FilterCursor itemsCursor;
     private HashSet<Long> readItemIds;
     private ImageView pinView;
     private boolean pinOn;
@@ -98,11 +95,6 @@ public class ItemActivity extends Activity
         setContentView(R.layout.item);
         ActivityHelper.bindTitle(this);
 
-        this.omitItemList = ReaderPreferences.isOmitItemList(this);
-        if (this.omitItemList) {
-            this.unreadOnly = true;
-        }
-
         long itemId = 0;
         if (savedState != null) {
             itemId = savedState.getLong("itemId", 0);
@@ -129,9 +121,17 @@ public class ItemActivity extends Activity
         this.subUri = ContentUris.withAppendedId(Subscription.CONTENT_URI, subId);
         ContentResolver cr = getContentResolver();
         Cursor cursor = cr.query(subUri, null, null, null, null);
-        cursor.moveToFirst();
+        cursor.moveToNext();
         this.sub = new Subscription.FilterCursor(cursor).getSubscription();
         cursor.close();
+
+        this.omitItemList = ReaderPreferences.isOmitItemList(this);
+        if (this.omitItemList) {
+            this.unreadOnly = true;
+            if (itemId == 0) {
+                itemId = this.sub.getReadItemId();
+            }
+        }
 
         ImageView iconView = (ImageView) findViewById(R.id.sub_icon);
         Bitmap icon = sub.getIcon(this);
@@ -244,7 +244,11 @@ public class ItemActivity extends Activity
     @Override
     public void onDestroy() {
         super.onDestroy();
-        destroyItems();
+        new Thread() {
+            public void run() {
+                destroyItems();
+            }
+        }.start();
         unbindService(this.serviceConn);
     }
 
@@ -338,8 +342,26 @@ public class ItemActivity extends Activity
         initItems(0);
     }
 
+    private void setCurrentItem(Item item) {
+        this.currentItem = item;
+        if (item == null) {
+            this.sub = null;
+            return;
+        }
+
+        setResult(RESULT_OK, new Intent()
+            .putExtra(ActivityHelper.EXTRA_ITEM_ID, item.getId()));
+
+        bindSubTitleView();
+        bindItemView();
+    }
+
     private void initItems(long itemId) {
-        ContentResolver cr = getContentResolver();
+        if (this.itemsCursor != null) {
+            this.itemsCursor.close();
+        }
+
+        String orderby = Item._ID + " desc";
         StringBuilder where = new StringBuilder(this.baseWhere.buff);
         int baseLength = where.length();
         String[] whereArgs = null;
@@ -347,99 +369,69 @@ public class ItemActivity extends Activity
             whereArgs = (String[]) this.baseWhere.args.clone();
         }
 
-        if (itemId == 0 && !this.omitItemList) {
-            itemId = this.sub.getReadItemId();
-        }
-        if (itemId == 0) {
+        if (itemId == 0 || this.unreadOnly) {
+            // NOTE: find unread
             String unreadOnlyWhere = " and " + Item._UNREAD + " = 1";
             int unreadOnlyWhereIndex = where.indexOf(unreadOnlyWhere);
             if (this.unreadOnly && unreadOnlyWhereIndex == -1) {
                 where.append(unreadOnlyWhere);
             }
-            String orderby = Item._ID + " desc limit 1";
-            Cursor c = cr.query(Item.CONTENT_URI, null, new String(where),
-                whereArgs, orderby);
-            if (c.moveToFirst()) {
-                this.currentItem = new Item.FilterCursor(c).getItem();
-                itemId = currentItem.getId();
-                this.baseWhere.buff.append(where.substring(baseLength));
+            Item.FilterCursor csr = new Item.FilterCursor(managedQuery(
+                Item.CONTENT_URI, null, new String(where), whereArgs, orderby));
+            int count = (csr == null) ? 0: csr.getCount();
+            if (count > 0) {
+                this.itemsCursor = skipCursor(csr, itemId);
+                setCurrentItem(csr.getItem());
+                return;
+            }
+            this.unreadOnly = false;
+            // NOTE: reset unread where buffer
+            if (unreadOnlyWhereIndex != -1) {
+                where.delete(unreadOnlyWhereIndex, unreadOnlyWhereIndex
+                    + unreadOnlyWhere.length());
+                this.baseWhere.buff = new StringBuilder(where);
                 baseLength = where.length();
             } else {
-                c.close();
-                this.unreadOnly = false;
-                if (unreadOnlyWhereIndex != -1) {
-                    where.delete(unreadOnlyWhereIndex, unreadOnlyWhereIndex
-                        + unreadOnlyWhere.length());
-                    this.baseWhere.buff = new StringBuilder(where);
-                    baseLength = where.length();
-                } else {
-                    where.setLength(baseLength);
-                }
-                c = cr.query(Item.CONTENT_URI, null, new String(where),
-                    whereArgs, orderby);
-                if (c.moveToFirst()) {
-                    this.currentItem = new Item.FilterCursor(c).getItem();
-                    itemId = currentItem.getId();
-                }
+                where.setLength(baseLength);
             }
-            c.close();
-        } else {
-            Uri itemUri = ContentUris.withAppendedId(Item.CONTENT_URI, itemId);
-            Cursor c = cr.query(itemUri, null, null, null, null);
-            if (c.moveToFirst()) {
-                this.currentItem = new Item.FilterCursor(c).getItem();
-            }
-            c.close();
         }
-        if (this.currentItem == null) {
+
+        Item.FilterCursor csr = new Item.FilterCursor(managedQuery(
+            Item.CONTENT_URI, null, new String(where), whereArgs, orderby));
+        int count = (csr == null) ? 0: csr.getCount();
+        if (count == 0) {
             bindSubTitleView();
-            bindItemView(ReaderPreferences.isShowItemControlls(
-                getApplicationContext()));
+            bindItemView();
             return;
         }
-
-        setResult(RESULT_OK, new Intent()
-            .putExtra(ActivityHelper.EXTRA_ITEM_ID, itemId));
-
-        where.setLength(baseLength);
-        Cursor c = cr.query(Item.CONTENT_URI, Item.SELECT_COUNT,
-            new String(where), whereArgs, null);
-        c.moveToFirst();
-        this.itemsCount = c.getInt(0);
-        c.close();
-
-        where.setLength(baseLength);
-        where.append(" and ");
-        where.append(Item._ID).append(" > ").append(itemId);
-        c = cr.query(Item.CONTENT_URI, Item.SELECT_MIN_ID,
-            new String(where), whereArgs, null);
-        if (c.moveToFirst()) {
-            this.previousItemId = c.getLong(0);
-            this.itemsIndex = c.getInt(1);
-        } else {
-            this.previousItemId = 0;
-            this.itemsIndex = 0;
-        }
-        c.close();
-
-        where.setLength(baseLength);
-        where.append(" and ");
-        where.append(Item._ID).append(" < ").append(itemId);
-        c = cr.query(Item.CONTENT_URI, Item.SELECT_MAX_ID,
-            new String(where), whereArgs, null);
-        if (c.moveToFirst()) {
-            this.nextItemId = c.getLong(0);
-        } else {
-            this.nextItemId = 0;
-        }
-        c.close();
-
-        bindSubTitleView();
-        bindItemView(ReaderPreferences.isShowItemControlls(
-            getApplicationContext()));
+        this.itemsCursor = skipCursor(csr, itemId);
+        setCurrentItem(csr.getItem());
     }
 
+    private static Item.FilterCursor skipCursor(Item.FilterCursor csr,
+            long itemId) {
+        if (itemId > 0) {
+            boolean found = false;
+            while (csr.moveToNext()) {
+                if (csr.getId() == itemId) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                csr.moveToFirst();
+            }
+        } else {
+            csr.moveToNext();
+        }
+        return csr;
+    } 
+
     private void destroyItems() {
+        if (this.itemsCursor != null) {
+            this.itemsCursor.close();
+            this.itemsCursor = null;
+        }
         if (this.readItemIds.size() == 0) {
             return;
         }
@@ -506,15 +498,15 @@ public class ItemActivity extends Activity
 
     private void nextItem() {
         scheduleHideTouchControlViews();
-        if (this.nextItemId > 0) {
-            initItems(this.nextItemId);
+        if (this.itemsCursor != null && this.itemsCursor.moveToNext()) {
+            setCurrentItem(this.itemsCursor.getItem());
         }
     }
 
     private void previousItem() {
         scheduleHideTouchControlViews();
-        if (this.previousItemId > 0) {
-            initItems(this.previousItemId);
+        if (this.itemsCursor != null && this.itemsCursor.moveToPrevious()) {
+            setCurrentItem(this.itemsCursor.getItem());
         }
     }
 
@@ -524,8 +516,12 @@ public class ItemActivity extends Activity
             visible = true;
         }
 
-        boolean hasPrevious = (this.previousItemId > 0);
-        boolean hasNext = (this.nextItemId > 0);
+        boolean hasPrevious = false;
+        boolean hasNext = false;
+        if (this.itemsCursor != null) {
+            hasPrevious = !this.itemsCursor.isFirst();
+            hasNext = !this.itemsCursor.isLast();
+        }
 
         final View previous = findViewById(R.id.previous);
         final View next = findViewById(R.id.next);
@@ -592,7 +588,7 @@ public class ItemActivity extends Activity
         TextView subTitleView = (TextView) findViewById(R.id.sub_title);
         StringBuilder buff = new StringBuilder(64);
         buff.append(this.sub.getTitle());
-        if (this.itemsCount > 0) {
+        if (this.itemsCursor != null) {
             buff.append(" [");
             if (this.omitItemList) {
                 if (this.unreadOnly) {
@@ -602,15 +598,17 @@ public class ItemActivity extends Activity
                 }
                 buff.append(":");
             }
-            buff.append(this.itemsIndex + 1);
+            buff.append(this.itemsCursor.getPosition() + 1);
             buff.append("/");
-            buff.append(this.itemsCount);
+            buff.append(this.itemsCursor.getCount());
             buff.append("]");
         }
         subTitleView.setText(new String(buff));
     }
 
-    private void bindItemView(boolean bindTouchControlViews) {
+    private void bindItemView() {
+        Context c = getApplicationContext();
+        boolean bindTouchControlViews = ReaderPreferences.isShowItemControlls(c);
         ImageView iconView = (ImageView) findViewById(R.id.icon_read_unread);
         TextView titleView = (TextView) findViewById(R.id.item_title);
         WebView bodyView = (WebView) findViewById(R.id.item_body);

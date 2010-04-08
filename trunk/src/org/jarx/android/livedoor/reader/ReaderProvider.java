@@ -265,7 +265,7 @@ public class ReaderProvider extends ContentProvider {
         case UM_ITEMS:
             qb.setTables(Item.TABLE_NAME);
             // PENDING:
-            limit = "200";
+            //limit = "200";
             break;
         case UM_PIN_ID:
             qb.setTables(Pin.TABLE_NAME);

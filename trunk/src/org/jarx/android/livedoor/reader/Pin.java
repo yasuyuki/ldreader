@@ -107,7 +107,6 @@ public class Pin implements Cloneable, Serializable, BaseColumns {
 
     public static class FilterCursor extends CursorWrapper {
 
-        private final Cursor cursor;
         private final Pin pin;
         private final int posId;
         private final int posUri;
@@ -121,27 +120,22 @@ public class Pin implements Cloneable, Serializable, BaseColumns {
 
         public FilterCursor(Cursor cursor, Pin pin) {
             super(cursor);
-            this.cursor = cursor;
             this.pin = pin;
-            this.posId = cursor.getColumnIndex(Pin._ID);
-            this.posUri = cursor.getColumnIndex(Pin._URI);
-            this.posTitle = cursor.getColumnIndex(Pin._TITLE);
-            this.posAction = cursor.getColumnIndex(Pin._ACTION);
-            this.posCreatedTime = cursor.getColumnIndex(Pin._CREATED_TIME);
+            this.posId = getColumnIndex(Pin._ID);
+            this.posUri = getColumnIndex(Pin._URI);
+            this.posTitle = getColumnIndex(Pin._TITLE);
+            this.posAction = getColumnIndex(Pin._ACTION);
+            this.posCreatedTime = getColumnIndex(Pin._CREATED_TIME);
         }
 
         public Pin getPin() {
             Pin pin = (this.pin == null) ? new Pin(): this.pin;
-            pin.setId(this.cursor.getLong(this.posId));
-            pin.setUri(this.cursor.getString(this.posUri));
-            pin.setTitle(this.cursor.getString(this.posTitle));
-            pin.setAction(this.cursor.getInt(this.posAction));
-            pin.setCreatedTime(this.cursor.getLong(this.posCreatedTime));
+            pin.setId(getLong(this.posId));
+            pin.setUri(getString(this.posUri));
+            pin.setTitle(getString(this.posTitle));
+            pin.setAction(getInt(this.posAction));
+            pin.setCreatedTime(getLong(this.posCreatedTime));
             return pin;
-        }
-
-        public Cursor getCursor() {
-            return this.cursor;
         }
     }
 }
