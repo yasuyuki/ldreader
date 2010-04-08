@@ -18,6 +18,7 @@ public class ReaderPreferences {
     public static final String KEY_SHOW_ITEM_CONTROLLS = "show_item_controlls";
     public static final String KEY_ITEM_BODY_FONT_SIZE = "item_body_font_size";
     public static final String KEY_OMIT_ITEM_LIST = "omit_item_list";
+    public static final String KEY_LAST_SYNC_TIME = "last_sync_time";
 
     public static final int SUBS_VIEW_FLAT = 1;
     public static final int SUBS_VIEW_FOLDER = 2;
@@ -55,6 +56,13 @@ public class ReaderPreferences {
 
     public static boolean getBoolean(Context c, String name, boolean def) {
         return getPreferences(c).getBoolean(name, def);
+    }
+
+    public static void putLong(Context c, String name, long value) {
+        SharedPreferences sp = getPreferences(c);
+        SharedPreferences.Editor editor = sp.edit();
+        editor.putLong(name, value);
+        editor.commit();
     }
 
     public static String getLoginId(Context c) {
@@ -136,5 +144,13 @@ public class ReaderPreferences {
         } else {
             return 13;
         }
+    }
+
+    public static long getLastSyncTime(Context c) {
+        return getLong(c, KEY_LAST_SYNC_TIME, 0);
+    }
+
+    public static void setLastSyncTime(Context c, long value) {
+        putLong(c, KEY_LAST_SYNC_TIME, value);
     }
 }
