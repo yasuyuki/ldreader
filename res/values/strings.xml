@@ -64,6 +64,8 @@
     <string name="preference_auto_touch_all_summary">Send reads to server with synchronization.</string>
     <string name="preference_sync_unread_only_title">Unreads only</string>
     <string name="preference_sync_unread_only_summary">Synchronization unreads only</string>
+    <string name="preference_sync_notifiable_title">Notifiable information</string>
+    <string name="preference_sync_notifiable_summary">Enable notification infomation message?</string>
 
     <string name="preference_category_view">Display</string>
     <string name="preference_view_unread_only_title">Hide no item</string>

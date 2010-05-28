@@ -64,6 +64,8 @@
     <string name="preference_auto_touch_all_summary">取り込み時、フィード毎にサーバに既読を送信します</string>
     <string name="preference_sync_unread_only_title">未読のみを取り込む</string>
     <string name="preference_sync_unread_only_summary">チェックを外すと未読が無い場合、既読を取り込みます</string>
+    <string name="preference_sync_notifiable_title">同期の通知</string>
+    <string name="preference_sync_notifiable_summary">同期の通常のお知らせを通知します</string>
 
     <string name="preference_category_view">表示設定</string>
     <string name="preference_view_unread_only_title">既読フィードを隠す</string>

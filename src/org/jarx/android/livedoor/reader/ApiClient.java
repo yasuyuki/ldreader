@@ -29,6 +29,7 @@ import org.apache.http.protocol.HTTP;
 import org.apache.http.conn.scheme.SchemeRegistry;
 import org.apache.http.conn.scheme.PlainSocketFactory;
 import org.apache.http.conn.scheme.Scheme;
+import org.apache.http.conn.ssl.SSLSocketFactory;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ContentHandler;
@@ -42,7 +43,7 @@ public class ApiClient {
     public static final String URL_READER = URL_BASE + "/reader/";
 
     private static final String URL_API_BASE = URL_BASE + "/api";
-    private static final String URL_LOGIN = "http://member.livedoor.com/login/index";
+    private static final String URL_LOGIN = "https://member.livedoor.com/login/index";
     private static final String URL_LOGOUT = URL_BASE + "/reader/logout";
     private static final String URL_API_SUBS = URL_API_BASE + "/subs";
     private static final String URL_API_ALL = URL_API_BASE + "/all";
@@ -68,6 +69,8 @@ public class ApiClient {
         final SchemeRegistry reg = new SchemeRegistry();
         reg.register(new Scheme("http",
             PlainSocketFactory.getSocketFactory(), 80));
+        reg.register(new Scheme("https",
+            SSLSocketFactory.getSocketFactory(), 443));
 
         final ThreadSafeClientConnManager manager
             = new ThreadSafeClientConnManager(params, reg);

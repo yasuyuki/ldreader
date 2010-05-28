@@ -12,6 +12,7 @@ public class ReaderPreferences {
     public static final String KEY_SUBS_SORT = "subs_sort";
     public static final String KEY_SYNC_INTERVAL_HOURS = "sync_interval_hours";
     public static final String KEY_SYNC_UNREAD_ONLY = "sync_unread_only";
+    public static final String KEY_SYNC_NOTIFIABLE = "sync_notifiable";
     public static final String KEY_AUTO_TOUCH_ALL = "auto_touch_all";
     public static final String KEY_VIEW_UNREAD_ONLY = "view_unread_only";
     public static final String KEY_DISABLE_ITEM_LINKS = "disable_item_links";
@@ -115,6 +116,10 @@ public class ReaderPreferences {
 
     public static boolean isSyncUnreadOnly(Context c) {
         return getBoolean(c, KEY_SYNC_UNREAD_ONLY, true);
+    }
+
+    public static boolean isSyncNotifiable(Context c) {
+        return getBoolean(c, KEY_SYNC_NOTIFIABLE, true);
     }
 
     public static boolean isAutoTouchAll(Context c) {
