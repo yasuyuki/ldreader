@@ -234,7 +234,7 @@ public class GroupSubListActivity extends ExpandableListActivity
 
             final int group = cursor.getInt(1);
             switch (group) {
-            case Subscription.GROUP_FOLDER:
+            case Subscription.GROUP_FOLDER: {
                 if (textLayout.getVisibility() != View.VISIBLE) {
                     textLayout.setVisibility(View.VISIBLE);
                 }
@@ -246,9 +246,13 @@ public class GroupSubListActivity extends ExpandableListActivity
                 if (title == null || title.length() == 0) {
                     title = getText(R.string.txt_no_folder);
                 }
-                titleView.setText(title + " (" + cursor.getInt(2) + " feeds)");
+                StringBuilder buff = new StringBuilder(title.length() + 32);
+                buff.append(title).append(" (");
+                buff.append(cursor.getInt(2)).append(" feeds, ");
+                buff.append(cursor.getInt(4)).append(" unreads)");
+                titleView.setText(new String(buff));
                 break;
-            case Subscription.GROUP_RATE:
+            } case Subscription.GROUP_RATE: {
                 if (textLayout.getVisibility() != View.GONE) {
                     textLayout.setVisibility(View.GONE);
                 }
@@ -258,9 +262,13 @@ public class GroupSubListActivity extends ExpandableListActivity
                 RatingBar ratingBar = (RatingBar) view.findViewById(R.id.rating_bar);
                 TextView countView = (TextView) view.findViewById(R.id.count);
                 ratingBar.setRating(cursor.getInt(3));
-                countView.setText(" (" + cursor.getInt(2) + " feeds)");
+                StringBuilder buff = new StringBuilder(32);
+                buff.append(" (");
+                buff.append(cursor.getInt(2)).append(" feeds, ");
+                buff.append(cursor.getInt(4)).append(" unreads)");
+                countView.setText(new String(buff));
                 break;
-            }
+            }}
         }
 
         @Override

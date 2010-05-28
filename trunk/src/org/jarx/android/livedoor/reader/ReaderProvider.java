@@ -239,8 +239,9 @@ public class ReaderProvider extends ContentProvider {
                 projection = new String[]{
                     "max(" + Subscription._ID + ") " + Subscription._ID,
                     Integer.toString(Subscription.GROUP_FOLDER),
-                    "count(*)",
-                    Subscription._FOLDER
+                    "count(" + Subscription._ID + ")",
+                    Subscription._FOLDER,
+                    "sum(" + Subscription._UNREAD_COUNT + ")"
                 };
             }
             groupBy = Subscription._FOLDER;
@@ -251,8 +252,9 @@ public class ReaderProvider extends ContentProvider {
                 projection = new String[]{
                     "max(" + Subscription._ID + ") " + Subscription._ID,
                     Integer.toString(Subscription.GROUP_RATE),
-                    "count(*)",
-                    Subscription._RATE
+                    "count(" + Subscription._ID + ")",
+                    Subscription._RATE,
+                    "sum(" + Subscription._UNREAD_COUNT + ")"
                 };
             }
             groupBy = Subscription._RATE;

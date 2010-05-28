@@ -169,12 +169,22 @@ public class ReaderService extends Service {
         this.syncRunning = syncRunning;
     }
 
+    private boolean isSyncNotifiable() {
+        return ReaderPreferences.isSyncNotifiable(getApplicationContext());
+    }
+
     private void notifySyncStarted() {
+        if (!isSyncNotifiable()) {
+            return;
+        }
         sendNotify(android.R.drawable.stat_notify_sync,
             getText(R.string.msg_sync_started));
     }
 
     private void notifySyncFinished(int syncCount) {
+        if (!isSyncNotifiable()) {
+            return;
+        }
         Context context = getApplicationContext();
         ReaderManager rm = ReaderManager.newInstance(context);
         int unreadCount = rm.countUnread();
